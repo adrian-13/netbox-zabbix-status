@@ -25,5 +25,9 @@ class ZabbixStatusConfig(PluginConfig):
         'sync_vms': True,
     }
 
+    def ready(self):
+        super().ready()
+        from . import jobs  # noqa: F401  — registrácia system jobu
+
 
 config = ZabbixStatusConfig

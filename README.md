@@ -11,7 +11,8 @@ Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
 
 - [x] M1 — skeleton: PluginConfig, modely (`ZabbixHost`, `ZabbixProblem`),
   API klient wrapper (`zabbix_utils`), `manage.py zabbix_check`
-- [ ] M2 — sync job + párovanie host ↔ Device/VM
+- [x] M2 — sync job + párovanie host ↔ Device/VM (`manage.py sync_zabbix`,
+  system job „Zabbix sync" každých `sync_interval` minút)
 - [ ] M3 — panel + tab „Zabbix" na Device/VM
 - [ ] M4 — list views, filtre, menu, dashboard widget, REST API
 - [ ] M5 — konzistenčné pohľady + ručné párovanie
