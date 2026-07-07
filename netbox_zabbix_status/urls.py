@@ -7,6 +7,7 @@ from . import views  # noqa: F401 — import registruje views (register_model_vi
 urlpatterns = [
     path('dashboard/', views.ZabbixDashboardView.as_view(), name='dashboard'),
     path('settings/', views.ZabbixSettingsView.as_view(), name='settings'),
+    path('refresh/', views.ZabbixRefreshView.as_view(), name='refresh'),
     path('hosts/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost', detail=False))),
     path('hosts/<int:pk>/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost'))),
     path('problems/', include(get_model_urls('netbox_zabbix_status', 'zabbixproblem', detail=False))),

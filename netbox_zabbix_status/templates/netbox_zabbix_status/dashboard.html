@@ -8,9 +8,13 @@
     <a href="{% url 'plugins:netbox_zabbix_status:settings' %}" class="btn btn-outline-secondary" title="Zabbix nastavenia">
       <i class="mdi mdi-cog"></i>
     </a>
-    <a href="{{ request.path }}" class="btn btn-outline-secondary">
-      <i class="mdi mdi-refresh"></i> Obnoviť
-    </a>
+    <form method="post" action="{% url 'plugins:netbox_zabbix_status:refresh' %}" class="d-inline">
+      {% csrf_token %}
+      <input type="hidden" name="return_url" value="{{ request.path }}">
+      <button type="submit" class="btn btn-outline-secondary" title="Spustí okamžitý sync zo Zabbixu">
+        <i class="mdi mdi-refresh"></i> Obnoviť zo Zabbixu
+      </button>
+    </form>
     {% if web_url %}
       <a href="{{ web_url }}" target="_blank" class="btn btn-outline-primary">
         <i class="mdi mdi-open-in-new"></i> Otvoriť Zabbix

@@ -30,8 +30,15 @@ from .forms import (
     ZabbixSettingsForm,
 )
 from .models import ZabbixConfiguration, ZabbixHost, ZabbixProblem
+from .sync import run_sync
 from .tables import ZabbixHostTable, ZabbixProblemTable
-from .zabbix import get_config, get_live_problems, get_setting, get_web_url
+from .zabbix import (
+    ZabbixConfigError,
+    get_config,
+    get_live_problems,
+    get_setting,
+    get_web_url,
+)
 
 SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
 
@@ -180,6 +187,7 @@ class ZabbixProblemListView(generic.ObjectListView):
     filterset = ZabbixProblemFilterSet
     filterset_form = ZabbixProblemFilterForm
     actions = {'export': {'view'}}
+    template_name = 'netbox_zabbix_status/zabbixproblem_list.html'
 
 
 class ZabbixDashboardView(LoginRequiredMixin, View):
@@ -282,6 +290,29 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
             'sync_stale': sync_stale,
             'web_url': get_web_url(),
         })
+
+
+class ZabbixRefreshView(LoginRequiredMixin, View):
+    """Tlačidlo „Obnoviť zo Zabbixu": synchrónne spustí run_sync() (čerstvé dáta
+    hneď, nie až pri ďalšom naplánovanom behu) a vráti sa na pôvodnú stránku."""
+
+    def post(self, request):
+        try:
+            stats = run_sync()
+        except ZabbixConfigError as e:
+            messages.error(request, str(e))
+        except Exception as e:
+            messages.error(request, f'Obnovenie zo Zabbixu zlyhalo: {e}')
+        else:
+            messages.success(
+                request,
+                f"Obnovené zo Zabbixu: {stats['hosts_total']} hostov, "
+                f"{stats['problems_total']} problémov ({stats['duration_s']} s).",
+            )
+        return_url = request.POST.get('return_url', '')
+        if not return_url.startswith('/'):
+            return_url = reverse('plugins:netbox_zabbix_status:dashboard')
+        return redirect(return_url)
 
 
 class ZabbixSettingsView(PermissionRequiredMixin, View):
