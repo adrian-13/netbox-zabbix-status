@@ -64,6 +64,12 @@ class ZabbixConfiguration(models.Model):
         verbose_name='Dashboard len spárované hosty',
         help_text='Vypnuté = dashboard zobrazuje všetky hosty zo Zabbixu.',
     )
+    dashboard_severities = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Severity na dashboarde',
+        help_text='Ktoré severity zobrazovať v dlaždiciach a paneloch dashboardu. '
+                  'Prázdne = všetky od minimálnej severity.',
+    )
     dashboard_refresh = models.PositiveIntegerField(
         default=60,
         verbose_name='Auto-refresh dashboardu (s)',
@@ -94,6 +100,7 @@ class ZabbixConfiguration(models.Model):
                 include_suppressed=bool(cfg.get('include_suppressed', False)),
                 cache_ttl=int(cfg.get('cache_ttl', 30)),
                 dashboard_matched_only=bool(cfg.get('dashboard_matched_only', True)),
+                dashboard_severities=list(cfg.get('dashboard_severities', [])),
                 dashboard_refresh=int(cfg.get('dashboard_refresh', 60)),
             )
         return obj

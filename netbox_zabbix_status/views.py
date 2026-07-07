@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -208,7 +208,13 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
         else:
             hosts = ZabbixHost.objects.all()
             scope_note = 'zobrazené sú všetky hosty zo Zabbixu'
-        problems = ZabbixProblem.objects.filter(host__in=hosts)
+
+        # Severity na dashboarde: výber z nastavení; prázdny = automaticky
+        # všetky od minimálnej severity (dlaždice pod ňou by boli vždy 0)
+        selected = sorted({int(s) for s in (get_setting('dashboard_severities', []) or [])})
+        if not selected:
+            selected = list(range(int(get_setting('min_severity', 2)), 6))
+        problems = ZabbixProblem.objects.filter(host__in=hosts, severity__in=selected)
 
         severity_counts = dict(
             problems.values_list('severity').annotate(n=Count('pk'))
@@ -225,6 +231,7 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
                 'url': f'{problems_url}?severity={severity}',
             }
             for severity, label in reversed(SeverityChoices.CHOICES)
+            if severity in selected
         ]
 
         stats = []
@@ -258,9 +265,20 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
                           'icon': 'mdi-power-plug-off',
                           'url': f'{hosts_url}{scope_qs}status=disabled'})
 
-        top_hosts = hosts.filter(problem_count__gt=0).order_by(
-            '-max_severity', '-problem_count', 'name'
-        ).prefetch_related('device__site', 'virtual_machine__site')[:12]
+        # Panel hostov počíta z filtrovaných problémov (nie z denormalizovaných
+        # polí), aby sedel s výberom severít
+        top_hosts = list(
+            hosts.annotate(
+                filtered_count=Count('problems', filter=Q(problems__severity__in=selected)),
+                filtered_max=Max('problems__severity', filter=Q(problems__severity__in=selected)),
+            )
+            .filter(filtered_count__gt=0)
+            .order_by('-filtered_max', '-filtered_count', 'name')
+            .prefetch_related('device__site', 'virtual_machine__site')[:12]
+        )
+        for h in top_hosts:
+            h.problem_count = h.filtered_count
+            h.max_severity = h.filtered_max
 
         recent_problems = problems.order_by('-severity', '-started').prefetch_related(
             'host__device', 'host__virtual_machine'

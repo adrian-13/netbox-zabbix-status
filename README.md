@@ -55,6 +55,7 @@ v `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker:
 | `sync_vms` | `True` | Párovať aj na virtualization.VirtualMachine |
 | `matching_enabled` | `True` | `False` = čistý Zabbix viewer: žiadne párovanie s NetBoxom — skryje panel/tab na zariadeniach, konzistenčné pohľady aj NetBox stĺpce v zoznamoch; existujúce väzby v DB zostávajú (prepnutie späť je bezstratové) |
 | `dashboard_matched_only` | `True` | Dashboard zobrazuje len spárované hosty; `False` = všetky |
+| `dashboard_severities` | `[]` | Severity zobrazované v dlaždiciach a paneloch dashboardu; prázdne = všetky od `min_severity` |
 | `dashboard_refresh` | `60` | Auto-refresh dashboardu v sekundách (`0` = vypnutý) |
 
 Zmena nastavení vyžaduje reštart kontajnerov (`docker compose up -d` /

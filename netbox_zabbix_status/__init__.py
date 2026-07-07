@@ -30,6 +30,8 @@ class ZabbixStatusConfig(PluginConfig):
         'matching_enabled': True,
         # Dashboard: len spárované hosty (True) alebo všetky (False)
         'dashboard_matched_only': True,
+        # Severity zobrazované na dashboarde; [] = všetky od min_severity
+        'dashboard_severities': [],
         # Auto-refresh dashboardu v sekundách (0 = vypnutý)
         'dashboard_refresh': 60,
     }
