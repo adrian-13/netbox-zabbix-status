@@ -13,7 +13,8 @@ Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
   API klient wrapper (`zabbix_utils`), `manage.py zabbix_check`
 - [x] M2 — sync job + párovanie host ↔ Device/VM (`manage.py sync_zabbix`,
   system job „Zabbix sync" každých `sync_interval` minút)
-- [ ] M3 — panel + tab „Zabbix" na Device/VM
+- [x] M3 — panel + tab „Zabbix" na Device/VM (live problémy s Redis cache,
+  fallback na DB snapshot pri nedostupnom API)
 - [ ] M4 — list views, filtre, menu, dashboard widget, REST API
 - [ ] M5 — konzistenčné pohľady + ručné párovanie
 

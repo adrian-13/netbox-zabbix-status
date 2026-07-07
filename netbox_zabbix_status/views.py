@@ -1,0 +1,117 @@
+from datetime import datetime, timezone as dt_timezone
+
+from dcim.models import Device
+from netbox.views import generic
+from utilities.views import ViewTab, register_model_view
+from virtualization.models import VirtualMachine
+
+from .choices import SeverityChoices
+from .zabbix import get_live_problems, get_web_url
+
+SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
+
+
+def _zabbix_tab_badge(instance):
+    """Badge = počet problémov ako string ('0' je truthy, takže tab zostane
+    viditeľný aj bez problémov); None pre nespárované objekty tab skryje."""
+    host = instance.zabbix_hosts.first()
+    if host is None:
+        return None
+    return str(host.problem_count)
+
+
+class ZabbixTabView(generic.ObjectView):
+    """Tab „Zabbix" — spoločná logika pre Device aj VM, podtrieda dodá
+    queryset a base_template."""
+
+    template_name = 'netbox_zabbix_status/host_tab.html'
+    base_template = None
+    tab = ViewTab(
+        label='Zabbix',
+        badge=_zabbix_tab_badge,
+        hide_if_empty=True,
+        permission='netbox_zabbix_status.view_zabbixhost',
+    )
+
+    @staticmethod
+    def _problem_row(name, severity, acknowledged, started, opdata, tags):
+        return {
+            'name': name,
+            'severity': severity,
+            'severity_label': SEVERITY_LABELS.get(severity, str(severity)),
+            'severity_color': SeverityChoices.get_color(severity),
+            'acknowledged': acknowledged,
+            'started': started,
+            'opdata': opdata,
+            'tags': tags,
+        }
+
+    def get_extra_context(self, request, instance):
+        host = instance.zabbix_hosts.first()
+        problems = []
+        live = None
+        live_error = None
+
+        if host:
+            try:
+                live = get_live_problems(host.zabbix_hostid)
+            except Exception as e:
+                live_error = f'{type(e).__name__}: {e}'
+            if live is not None:
+                problems = [
+                    self._problem_row(
+                        name=p.get('name', ''),
+                        severity=int(p.get('severity', 0)),
+                        acknowledged=p.get('acknowledged') == '1',
+                        started=(
+                            datetime.fromtimestamp(int(p['clock']), tz=dt_timezone.utc)
+                            if p.get('clock') else None
+                        ),
+                        opdata=p.get('opdata') or '',
+                        tags=p.get('tags', []),
+                    )
+                    for p in live
+                ]
+                problems.sort(key=lambda r: (r['severity'], r['started'] or 0), reverse=True)
+            else:
+                problems = [
+                    self._problem_row(
+                        name=p.name,
+                        severity=p.severity,
+                        acknowledged=p.acknowledged,
+                        started=p.started,
+                        opdata=p.opdata,
+                        tags=p.zabbix_tags,
+                    )
+                    for p in host.problems.all()
+                ]
+
+        zabbix_links = {}
+        web_url = get_web_url()
+        if host and web_url:
+            zabbix_links = {
+                'problems': f'{web_url}/zabbix.php?action=problem.view&hostids%5B%5D={host.zabbix_hostid}',
+                'latest': f'{web_url}/zabbix.php?action=latest.view&hostids%5B%5D={host.zabbix_hostid}',
+                'dashboard': f'{web_url}/zabbix.php?action=host.dashboard.view&hostid={host.zabbix_hostid}',
+            }
+
+        return {
+            'zabbix_host': host,
+            'problems': problems,
+            'is_live': live is not None,
+            'live_error': live_error,
+            'zabbix_links': zabbix_links,
+            'base_template': self.base_template,
+        }
+
+
+@register_model_view(Device, name='zabbix', path='zabbix')
+class DeviceZabbixTabView(ZabbixTabView):
+    queryset = Device.objects.all()
+    base_template = 'dcim/device/base.html'
+
+
+@register_model_view(VirtualMachine, name='zabbix', path='zabbix')
+class VirtualMachineZabbixTabView(ZabbixTabView):
+    queryset = VirtualMachine.objects.all()
+    base_template = 'virtualization/virtualmachine/base.html'
