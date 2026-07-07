@@ -21,6 +21,10 @@ Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
 - [x] M5 — konzistenčné pohľady (Nepokryté zariadenia / Nepokryté VM /
   Nespárované hosty) + ručné párovanie (edit hosta → match_method=manual)
 
+- [x] Dashboard (menu Zabbix → Dashboard) — dlaždice problémov podľa severity,
+  štatistiky dostupnosti spárovaných hostov, panely najhorších hostov
+  a aktívnych problémov; auto-refresh 60 s
+
 **v1 kompletná.** Kandidáti na v2: návrhy importu zo Zabbix inventory,
 webhook receiver (problém → Journal), GraphQL.
 

@@ -1,4 +1,11 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timedelta, timezone as dt_timezone
+
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Q
+from django.shortcuts import render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.generic import View
 
 from dcim.choices import DeviceStatusChoices
 from dcim.filtersets import DeviceFilterSet
@@ -13,12 +20,12 @@ from virtualization.forms import VirtualMachineFilterForm
 from virtualization.models import VirtualMachine
 from virtualization.tables import VirtualMachineTable
 
-from .choices import SeverityChoices
+from .choices import AvailabilityChoices, SeverityChoices
 from .filtersets import ZabbixHostFilterSet, ZabbixProblemFilterSet
 from .forms import ZabbixHostAssignForm, ZabbixHostFilterForm, ZabbixProblemFilterForm
 from .models import ZabbixHost, ZabbixProblem
 from .tables import ZabbixHostTable, ZabbixProblemTable
-from .zabbix import get_live_problems, get_web_url
+from .zabbix import get_config, get_live_problems, get_web_url
 
 SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
 
@@ -160,6 +167,86 @@ class ZabbixProblemListView(generic.ObjectListView):
     filterset = ZabbixProblemFilterSet
     filterset_form = ZabbixProblemFilterForm
     actions = {'export': {'view'}}
+
+
+class ZabbixDashboardView(LoginRequiredMixin, View):
+    """Prehľadový dashboard v štýle Zabbixu: dlaždice problémov podľa severity,
+    rýchle štatistiky spárovaných hostov a panely najhorších hostov a problémov.
+    Číta výhradne z DB snapshotu — rýchle aj pri výpadku Zabbixu."""
+
+    def get(self, request):
+        cfg = get_config()
+        matched = ZabbixHost.objects.filter(
+            Q(device__isnull=False) | Q(virtual_machine__isnull=False)
+        )
+        problems = ZabbixProblem.objects.filter(host__in=matched)
+
+        severity_counts = dict(
+            problems.values_list('severity').annotate(n=Count('pk'))
+        )
+        problems_url = reverse('plugins:netbox_zabbix_status:zabbixproblem_list')
+        hosts_url = reverse('plugins:netbox_zabbix_status:zabbixhost_list')
+
+        severity_tiles = [
+            {
+                'label': label,
+                'color': SeverityChoices.get_color(severity),
+                'count': severity_counts.get(severity, 0),
+                'url': f'{problems_url}?severity={severity}',
+            }
+            for severity, label in reversed(SeverityChoices.CHOICES)
+        ]
+
+        stats = [
+            {'label': 'Spárované hosty', 'value': matched.count(),
+             'icon': 'mdi-server', 'url': f'{hosts_url}?is_matched=true'},
+            {'label': 'S problémami', 'value': matched.filter(problem_count__gt=0).count(),
+             'icon': 'mdi-alert-circle-outline',
+             'url': f'{hosts_url}?is_matched=true&has_problems=true'},
+            {'label': 'Agent down',
+             'value': matched.filter(agent_available=AvailabilityChoices.DOWN).count(),
+             'icon': 'mdi-lan-disconnect', 'url': f'{hosts_url}?agent_available=down'},
+            {'label': 'SNMP down',
+             'value': matched.filter(snmp_available=AvailabilityChoices.DOWN).count(),
+             'icon': 'mdi-access-point-off', 'url': f'{hosts_url}?snmp_available=down'},
+            {'label': 'Maintenance', 'value': matched.filter(in_maintenance=True).count(),
+             'icon': 'mdi-wrench', 'url': f'{hosts_url}?in_maintenance=true'},
+            {'label': 'Nespárované',
+             'value': ZabbixHost.objects.filter(
+                 device__isnull=True, virtual_machine__isnull=True).count(),
+             'icon': 'mdi-link-off',
+             'url': reverse('plugins:netbox_zabbix_status:unmatched_hosts')},
+        ]
+
+        top_hosts = matched.filter(problem_count__gt=0).order_by(
+            '-max_severity', '-problem_count', 'name'
+        ).prefetch_related('device__site', 'virtual_machine__site')[:12]
+
+        recent_problems = problems.order_by('-severity', '-started').prefetch_related(
+            'host__device', 'host__virtual_machine'
+        )[:15]
+
+        last_synced = ZabbixHost.objects.order_by('-last_synced').values_list(
+            'last_synced', flat=True
+        ).first()
+        sync_interval = int(cfg.get('sync_interval', 5))
+        sync_stale = bool(
+            last_synced
+            and timezone.now() - last_synced > timedelta(minutes=2 * sync_interval)
+        )
+
+        return render(request, 'netbox_zabbix_status/dashboard.html', {
+            'severity_tiles': severity_tiles,
+            'problems_total': sum(severity_counts.values()),
+            'stats': stats,
+            'top_hosts': top_hosts,
+            'recent_problems': recent_problems,
+            'problems_url': problems_url,
+            'hosts_url': hosts_url,
+            'last_synced': last_synced,
+            'sync_stale': sync_stale,
+            'web_url': get_web_url(),
+        })
 
 
 #

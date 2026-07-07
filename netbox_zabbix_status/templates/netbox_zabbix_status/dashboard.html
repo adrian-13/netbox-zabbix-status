@@ -1,0 +1,183 @@
+{% extends 'generic/_base.html' %}
+{% load helpers %}
+
+{% block title %}Zabbix dashboard{% endblock %}
+
+{% block controls %}
+  <div class="btn-list">
+    <a href="{{ request.path }}" class="btn btn-outline-secondary">
+      <i class="mdi mdi-refresh"></i> Obnoviť
+    </a>
+    {% if web_url %}
+      <a href="{{ web_url }}" target="_blank" class="btn btn-outline-primary">
+        <i class="mdi mdi-open-in-new"></i> Otvoriť Zabbix
+      </a>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block content %}
+  {% if sync_stale %}
+    <div class="alert alert-warning">
+      <i class="mdi mdi-alert"></i>
+      Dáta môžu byť neaktuálne — posledný sync prebehol pred {{ last_synced|timesince }}.
+      Skontroluj system job „Zabbix sync" v Background Tasks.
+    </div>
+  {% endif %}
+
+  {# Dlaždice problémov podľa severity — štýl Zabbix "Problems by severity" #}
+  <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-2 mb-3">
+    {% for tile in severity_tiles %}
+      <div class="col">
+        <a href="{{ tile.url }}" class="text-decoration-none">
+          <div class="card text-bg-{{ tile.color }} text-center{% if not tile.count %} opacity-50{% endif %}">
+            <div class="card-body p-2">
+              <div class="fs-1 fw-bold lh-1">{{ tile.count }}</div>
+              <div class="small">{{ tile.label }}</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# Rýchle štatistiky hostov #}
+  <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-2 mb-3">
+    {% for stat in stats %}
+      <div class="col">
+        <a href="{{ stat.url }}" class="text-decoration-none">
+          <div class="card">
+            <div class="card-body p-2 d-flex align-items-center gap-2">
+              <i class="mdi {{ stat.icon }} fs-2 text-muted"></i>
+              <div>
+                <div class="fs-3 fw-bold lh-1">{{ stat.value }}</div>
+                <div class="small text-muted">{{ stat.label }}</div>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="row">
+    {# Najhorší hostia #}
+    <div class="col col-12 col-xl-5">
+      <div class="card">
+        <h2 class="card-header">
+          Hostia s problémami
+          <div class="card-actions">
+            <a href="{{ hosts_url }}?is_matched=true&has_problems=true" class="btn btn-ghost-primary btn-sm">
+              Všetci <i class="mdi mdi-arrow-right"></i>
+            </a>
+          </div>
+        </h2>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Site</th>
+              <th>Dostupnosť</th>
+              <th class="text-end">Problémy</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in top_hosts %}
+              <tr>
+                <td>
+                  <a href="{{ h.get_absolute_url }}">{{ h }}</a>
+                  <div class="small text-muted">{{ h.assigned_object|linkify }}</div>
+                </td>
+                <td>{{ h.site|linkify|placeholder }}</td>
+                <td>
+                  {% if h.agent_available != 'unknown' %}
+                    <span class="badge text-bg-{% if h.agent_available == 'up' %}green{% else %}red{% endif %}" title="Zabbix agent">A</span>
+                  {% endif %}
+                  {% if h.snmp_available != 'unknown' %}
+                    <span class="badge text-bg-{% if h.snmp_available == 'up' %}green{% else %}red{% endif %}" title="SNMP">S</span>
+                  {% endif %}
+                  {% if h.in_maintenance %}
+                    <span class="badge text-bg-orange" title="V maintenance okne"><i class="mdi mdi-wrench"></i></span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  {% badge h.problem_count bg_color=h.get_max_severity_color %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-muted">
+                  <i class="mdi mdi-check-circle text-success"></i> Všetky spárované hosty sú bez problémov
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Aktívne problémy — štýl Zabbix "Problems" #}
+    <div class="col col-12 col-xl-7">
+      <div class="card">
+        <h2 class="card-header">
+          Aktívne problémy
+          <span class="badge text-bg-secondary ms-2">{{ problems_total }}</span>
+          <div class="card-actions">
+            <a href="{{ problems_url }}" class="btn btn-ghost-primary btn-sm">
+              Všetky <i class="mdi mdi-arrow-right"></i>
+            </a>
+          </div>
+        </h2>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Severita</th>
+              <th>Trvanie</th>
+              <th>Host</th>
+              <th>Problém</th>
+              <th>Ack</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in recent_problems %}
+              <tr>
+                <td>{% badge p.get_severity_display bg_color=p.get_severity_color %}</td>
+                <td class="text-nowrap" title="{{ p.started }}">{{ p.started|timesince }}</td>
+                <td>{{ p.host.assigned_object|linkify }}</td>
+                <td>
+                  {{ p.name }}
+                  {% if p.opdata %}<div class="small text-muted">{{ p.opdata }}</div>{% endif %}
+                </td>
+                <td>
+                  {% if p.acknowledged %}
+                    <i class="mdi mdi-check-circle text-success" title="Acknowledged"></i>
+                  {% else %}
+                    <i class="mdi mdi-circle-outline text-muted" title="Neacknowledgnuté"></i>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-muted">
+                  <i class="mdi mdi-check-circle text-success"></i> Žiadne aktívne problémy
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-muted small mt-2">
+    <i class="mdi mdi-sync"></i>
+    Posledný sync: {% if last_synced %}<span title="{{ last_synced }}">pred {{ last_synced|timesince }}</span>{% else %}zatiaľ žiadny{% endif %}
+    · zobrazené sú len spárované hosty
+    · stránka sa obnovuje každých 60 s
+  </div>
+
+  <script>
+    // Auto-refresh dashboardu (monitoring view)
+    setTimeout(function () { window.location.reload(); }, 60000);
+  </script>
+{% endblock %}

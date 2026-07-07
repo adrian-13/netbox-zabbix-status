@@ -6,13 +6,20 @@ from netbox.filtersets import NetBoxModelFilterSet
 from tenancy.models import Tenant
 from virtualization.models import VirtualMachine
 
-from .choices import MatchMethodChoices, SeverityChoices, ZabbixHostStatusChoices
+from .choices import (
+    AvailabilityChoices,
+    MatchMethodChoices,
+    SeverityChoices,
+    ZabbixHostStatusChoices,
+)
 from .models import ZabbixHost, ZabbixProblem
 
 
 class ZabbixHostFilterSet(NetBoxModelFilterSet):
     status = django_filters.MultipleChoiceFilter(choices=ZabbixHostStatusChoices)
     match_method = django_filters.MultipleChoiceFilter(choices=MatchMethodChoices)
+    agent_available = django_filters.MultipleChoiceFilter(choices=AvailabilityChoices)
+    snmp_available = django_filters.MultipleChoiceFilter(choices=AvailabilityChoices)
     is_matched = django_filters.BooleanFilter(method='filter_is_matched', label='Spárované')
     has_problems = django_filters.BooleanFilter(method='filter_has_problems', label='Má problémy')
     max_severity = django_filters.MultipleChoiceFilter(choices=SeverityChoices.CHOICES)
