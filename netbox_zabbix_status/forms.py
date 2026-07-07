@@ -1,10 +1,11 @@
 from django import forms
 
-from dcim.models import DeviceRole, Site
-from netbox.forms import NetBoxModelFilterSetForm
+from dcim.models import Device, DeviceRole, Site
+from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
 from tenancy.models import Tenant
-from utilities.forms.fields import DynamicModelMultipleChoiceField
+from utilities.forms.fields import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from utilities.forms.rendering import FieldSet
+from virtualization.models import VirtualMachine
 
 from .choices import MatchMethodChoices, SeverityChoices, ZabbixHostStatusChoices
 from .models import ZabbixHost, ZabbixProblem
@@ -14,6 +15,37 @@ BOOLEAN_CHOICES = (
     ('true', 'Áno'),
     ('false', 'Nie'),
 )
+
+
+class ZabbixHostAssignForm(NetBoxModelForm):
+    """Ručné priradenie Zabbix hosta k zariadeniu alebo VM.
+
+    Uloženie nastaví match_method=manual (sync ho už neprepíše); vyčistenie
+    oboch polí nastaví none, takže ďalší sync skúsi automatické párovanie.
+    """
+
+    device = DynamicModelChoiceField(
+        queryset=Device.objects.all(), required=False, label='Zariadenie'
+    )
+    virtual_machine = DynamicModelChoiceField(
+        queryset=VirtualMachine.objects.all(), required=False, label='Virtuálny stroj'
+    )
+
+    fieldsets = (
+        FieldSet('device', 'virtual_machine', name='Priradenie'),
+    )
+
+    class Meta:
+        model = ZabbixHost
+        fields = ('device', 'virtual_machine')
+
+    def save(self, *args, **kwargs):
+        self.instance.match_method = (
+            MatchMethodChoices.MANUAL
+            if self.instance.device or self.instance.virtual_machine
+            else MatchMethodChoices.NONE
+        )
+        return super().save(*args, **kwargs)
 
 
 class ZabbixHostFilterForm(NetBoxModelFilterSetForm):

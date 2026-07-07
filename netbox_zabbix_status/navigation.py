@@ -16,5 +16,22 @@ menu = PluginMenu(
                 permissions=['netbox_zabbix_status.view_zabbixproblem'],
             ),
         )),
+        ('Konzistencia', (
+            PluginMenuItem(
+                link='plugins:netbox_zabbix_status:unmonitored_devices',
+                link_text='Nepokryté zariadenia',
+                permissions=['dcim.view_device'],
+            ),
+            PluginMenuItem(
+                link='plugins:netbox_zabbix_status:unmonitored_vms',
+                link_text='Nepokryté VM',
+                permissions=['virtualization.view_virtualmachine'],
+            ),
+            PluginMenuItem(
+                link='plugins:netbox_zabbix_status:unmatched_hosts',
+                link_text='Nespárované hosty',
+                permissions=['netbox_zabbix_status.view_zabbixhost'],
+            ),
+        )),
     ),
 )

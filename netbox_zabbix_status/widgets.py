@@ -29,7 +29,6 @@ class ZabbixProblemsWidget(DashboardWidget):
             for severity, label in reversed(SeverityChoices.CHOICES)
             if counts.get(severity)
         ]
-        hosts_url = reverse('plugins:netbox_zabbix_status:zabbixhost_list')
         unmatched = ZabbixHost.objects.filter(
             device__isnull=True, virtual_machine__isnull=True
         ).count()
@@ -38,5 +37,5 @@ class ZabbixProblemsWidget(DashboardWidget):
             'total': sum(counts.values()),
             'problems_url': problems_url,
             'unmatched': unmatched,
-            'unmatched_url': f'{hosts_url}?is_matched=false',
+            'unmatched_url': reverse('plugins:netbox_zabbix_status:unmatched_hosts'),
         })

@@ -36,8 +36,8 @@ class ZabbixHostTable(NetBoxTable):
     in_maintenance = columns.BooleanColumn(verbose_name='Maintenance')
     last_synced = columns.DateTimeColumn(verbose_name='Sync')
     tags = columns.TagColumn(url_name='plugins:netbox_zabbix_status:zabbixhost_list')
-    # Synced dáta — žiadne riadkové edit/delete akcie
-    actions = columns.ActionsColumn(actions=())
+    # Edit = ručné priradenie k zariadeniu/VM; ostatné dáta sú synced (read-only)
+    actions = columns.ActionsColumn(actions=('edit',))
 
     class Meta(NetBoxTable.Meta):
         model = ZabbixHost

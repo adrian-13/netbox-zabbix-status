@@ -8,4 +8,8 @@ urlpatterns = [
     path('hosts/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost', detail=False))),
     path('hosts/<int:pk>/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost'))),
     path('problems/', include(get_model_urls('netbox_zabbix_status', 'zabbixproblem', detail=False))),
+    # Konzistenčné pohľady
+    path('unmatched-hosts/', views.UnmatchedHostsView.as_view(), name='unmatched_hosts'),
+    path('unmonitored-devices/', views.UnmonitoredDevicesView.as_view(), name='unmonitored_devices'),
+    path('unmonitored-vms/', views.UnmonitoredVMsView.as_view(), name='unmonitored_vms'),
 ]

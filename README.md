@@ -18,7 +18,11 @@ Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
 - [x] M4 — list views (Hosty, Problémy) s filtrami podľa site/tenant/roly,
   menu „Zabbix", dashboard widget, read-only REST API
   (`/api/plugins/zabbix-status/hosts/`, `/problems/`), global search
-- [ ] M5 — konzistenčné pohľady + ručné párovanie
+- [x] M5 — konzistenčné pohľady (Nepokryté zariadenia / Nepokryté VM /
+  Nespárované hosty) + ručné párovanie (edit hosta → match_method=manual)
+
+**v1 kompletná.** Kandidáti na v2: návrhy importu zo Zabbix inventory,
+webhook receiver (problém → Journal), GraphQL.
 
 ## Konfigurácia
 
