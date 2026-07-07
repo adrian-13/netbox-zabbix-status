@@ -6,6 +6,10 @@ from utilities.views import ViewTab, register_model_view
 from virtualization.models import VirtualMachine
 
 from .choices import SeverityChoices
+from .filtersets import ZabbixHostFilterSet, ZabbixProblemFilterSet
+from .forms import ZabbixHostFilterForm, ZabbixProblemFilterForm
+from .models import ZabbixHost, ZabbixProblem
+from .tables import ZabbixHostTable, ZabbixProblemTable
 from .zabbix import get_live_problems, get_web_url
 
 SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
@@ -115,3 +119,36 @@ class DeviceZabbixTabView(ZabbixTabView):
 class VirtualMachineZabbixTabView(ZabbixTabView):
     queryset = VirtualMachine.objects.all()
     base_template = 'virtualization/virtualmachine/base.html'
+
+
+#
+# Zoznamy a detail (M4) — synced dáta sú read-only, preto len export akcia
+#
+
+@register_model_view(ZabbixHost, 'list', path='', detail=False)
+class ZabbixHostListView(generic.ObjectListView):
+    queryset = ZabbixHost.objects.prefetch_related(
+        'device__site', 'virtual_machine__site', 'tags'
+    )
+    table = ZabbixHostTable
+    filterset = ZabbixHostFilterSet
+    filterset_form = ZabbixHostFilterForm
+    actions = {'export': {'view'}}
+
+
+@register_model_view(ZabbixHost)
+class ZabbixHostView(generic.ObjectView):
+    queryset = ZabbixHost.objects.prefetch_related(
+        'device__site', 'virtual_machine__site', 'problems'
+    )
+
+
+@register_model_view(ZabbixProblem, 'list', path='', detail=False)
+class ZabbixProblemListView(generic.ObjectListView):
+    queryset = ZabbixProblem.objects.prefetch_related(
+        'host__device__site', 'host__virtual_machine__site'
+    )
+    table = ZabbixProblemTable
+    filterset = ZabbixProblemFilterSet
+    filterset_form = ZabbixProblemFilterForm
+    actions = {'export': {'view'}}

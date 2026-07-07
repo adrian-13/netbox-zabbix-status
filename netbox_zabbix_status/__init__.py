@@ -27,7 +27,8 @@ class ZabbixStatusConfig(PluginConfig):
 
     def ready(self):
         super().ready()
-        from . import jobs  # noqa: F401  — registrácia system jobu
+        # Explicitné importy registrujú system job, search index a dashboard widget
+        from . import jobs, search, widgets  # noqa: F401
 
 
 config = ZabbixStatusConfig

@@ -1,0 +1,26 @@
+{% load helpers %}
+{% if total %}
+  <div class="list-group list-group-flush">
+    {% for row in rows %}
+      <a href="{{ row.url }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        {% badge row.label bg_color=row.color %}
+        <span class="fw-bold">{{ row.count }}</span>
+      </a>
+    {% endfor %}
+    <a href="{{ problems_url }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+      <span>Spolu</span>
+      <span class="fw-bold">{{ total }}</span>
+    </a>
+  </div>
+{% else %}
+  <div class="text-muted p-2">
+    <i class="mdi mdi-check-circle text-success"></i> Žiadne aktívne problémy
+  </div>
+{% endif %}
+{% if unmatched %}
+  <div class="p-2 border-top">
+    <a href="{{ unmatched_url }}">
+      <i class="mdi mdi-link-off"></i> Nespárované hosty: {{ unmatched }}
+    </a>
+  </div>
+{% endif %}

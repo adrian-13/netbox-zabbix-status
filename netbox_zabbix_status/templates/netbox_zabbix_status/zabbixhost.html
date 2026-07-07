@@ -1,0 +1,142 @@
+{% extends 'generic/object.html' %}
+{% load helpers %}
+
+{% block content %}
+  <div class="row mb-3">
+    <div class="col col-12 col-xl-6">
+      <div class="card">
+        <h2 class="card-header">Zabbix host</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">Viditeľné meno</th>
+            <td>{{ object.visible_name|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Technické meno</th>
+            <td><code>{{ object.name }}</code></td>
+          </tr>
+          <tr>
+            <th scope="row">Host ID</th>
+            <td>{{ object.zabbix_hostid }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Stav</th>
+            <td>
+              {% badge object.get_status_display bg_color=object.get_status_color %}
+              {% if object.in_maintenance %}{% badge "Maintenance" bg_color="orange" %}{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Priradený objekt</th>
+            <td>{{ object.assigned_object|linkify|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Site</th>
+            <td>{{ object.site|linkify|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Párovanie</th>
+            <td>{% badge object.get_match_method_display bg_color=object.get_match_method_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">Proxy</th>
+            <td>{{ object.proxy_name|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Host groups</th>
+            <td>{{ object.host_groups|join:", "|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Šablóny</th>
+            <td>{{ object.templates|join:", "|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Posledný sync</th>
+            <td><span title="{{ object.last_synced }}">pred {{ object.last_synced|timesince }}</span></td>
+          </tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">Dostupnosť</h2>
+        <table class="table table-hover attr-table">
+          <tr>
+            <th scope="row">Agent</th>
+            <td>{% badge object.get_agent_available_display bg_color=object.get_agent_available_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">SNMP</th>
+            <td>{% badge object.get_snmp_available_display bg_color=object.get_snmp_available_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">IPMI</th>
+            <td>{% badge object.get_ipmi_available_display bg_color=object.get_ipmi_available_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">JMX</th>
+            <td>{% badge object.get_jmx_available_display bg_color=object.get_jmx_available_color %}</td>
+          </tr>
+          <tr>
+            <th scope="row">Aktívny agent</th>
+            <td>{% badge object.get_active_available_display bg_color=object.get_active_available_color %}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="col col-12 col-xl-6">
+      <div class="card">
+        <h2 class="card-header">Interfejsy</h2>
+        <table class="table table-hover">
+          <thead>
+            <tr><th>Typ</th><th>Adresa</th><th>Port</th></tr>
+          </thead>
+          <tbody>
+            {% for iface in object.interfaces %}
+              <tr>
+                <td>
+                  {% if iface.type == '1' %}Agent{% elif iface.type == '2' %}SNMP{% elif iface.type == '3' %}IPMI{% elif iface.type == '4' %}JMX{% else %}{{ iface.type }}{% endif %}
+                </td>
+                <td><code>{% if iface.useip == '1' %}{{ iface.ip }}{% else %}{{ iface.dns }}{% endif %}</code></td>
+                <td>{{ iface.port }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3" class="text-muted">Žiadne interfejsy</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2 class="card-header">Aktívne problémy (snapshot)</h2>
+        <table class="table table-hover">
+          <thead>
+            <tr><th>Severita</th><th>Problém</th><th>Od</th><th>Ack</th></tr>
+          </thead>
+          <tbody>
+            {% for p in object.problems.all %}
+              <tr>
+                <td>{% badge p.get_severity_display bg_color=p.get_severity_color %}</td>
+                <td>
+                  {{ p.name }}
+                  {% if p.opdata %}<div class="small text-muted">{{ p.opdata }}</div>{% endif %}
+                </td>
+                <td><span title="{{ p.started }}">{{ p.started|timesince }}</span></td>
+                <td>
+                  {% if p.acknowledged %}
+                    <i class="mdi mdi-check-circle text-success"></i>
+                  {% else %}
+                    <i class="mdi mdi-circle-outline text-muted"></i>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-muted">
+                  <i class="mdi mdi-check-circle text-success"></i> Žiadne aktívne problémy
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

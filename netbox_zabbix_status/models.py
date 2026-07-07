@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
 from netbox.models import NetBoxModel
 
@@ -99,9 +100,17 @@ class ZabbixHost(NetBoxModel):
                 'Zabbix host môže byť priradený buď k zariadeniu, alebo k VM, nie k obom.'
             )
 
+    def get_absolute_url(self):
+        return reverse('plugins:netbox_zabbix_status:zabbixhost', args=[self.pk])
+
     @property
     def assigned_object(self):
         return self.device or self.virtual_machine
+
+    @property
+    def site(self):
+        obj = self.assigned_object
+        return getattr(obj, 'site', None) if obj else None
 
     def get_status_color(self):
         return ZabbixHostStatusChoices.colors.get(self.status)
@@ -111,6 +120,21 @@ class ZabbixHost(NetBoxModel):
 
     def get_max_severity_color(self):
         return SeverityChoices.get_color(self.max_severity)
+
+    def get_agent_available_color(self):
+        return AvailabilityChoices.colors.get(self.agent_available)
+
+    def get_snmp_available_color(self):
+        return AvailabilityChoices.colors.get(self.snmp_available)
+
+    def get_ipmi_available_color(self):
+        return AvailabilityChoices.colors.get(self.ipmi_available)
+
+    def get_jmx_available_color(self):
+        return AvailabilityChoices.colors.get(self.jmx_available)
+
+    def get_active_available_color(self):
+        return AvailabilityChoices.colors.get(self.active_available)
 
 
 class ZabbixProblem(NetBoxModel):
@@ -140,6 +164,10 @@ class ZabbixProblem(NetBoxModel):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        # Problémy nemajú detail view — odkazuje sa na zoznam
+        return reverse('plugins:netbox_zabbix_status:zabbixproblem_list')
 
     def get_severity_color(self):
         return SeverityChoices.get_color(self.severity)

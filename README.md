@@ -15,7 +15,9 @@ Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
   system job „Zabbix sync" každých `sync_interval` minút)
 - [x] M3 — panel + tab „Zabbix" na Device/VM (live problémy s Redis cache,
   fallback na DB snapshot pri nedostupnom API)
-- [ ] M4 — list views, filtre, menu, dashboard widget, REST API
+- [x] M4 — list views (Hosty, Problémy) s filtrami podľa site/tenant/roly,
+  menu „Zabbix", dashboard widget, read-only REST API
+  (`/api/plugins/zabbix-status/hosts/`, `/problems/`), global search
 - [ ] M5 — konzistenčné pohľady + ručné párovanie
 
 ## Konfigurácia
