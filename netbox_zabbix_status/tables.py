@@ -14,8 +14,10 @@ if _MATCHING_ENABLED:
         'name', 'device', 'virtual_machine', 'status', 'match_method',
         'problem_count', 'max_severity', 'last_synced',
     )
+    # 'host' (meno zo Zabbixu) je v defaulte — device/VM/site sú prázdne
+    # pri problémoch na nespárovaných hostoch a riadok by nemal identifikáciu
     _PROBLEM_DEFAULT_COLUMNS = (
-        'severity', 'name', 'device', 'virtual_machine', 'site',
+        'severity', 'name', 'host', 'device', 'site',
         'acknowledged', 'started',
     )
 else:
