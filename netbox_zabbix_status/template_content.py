@@ -1,6 +1,6 @@
 from netbox.plugins import PluginTemplateExtension
 
-from .zabbix import get_web_url
+from .zabbix import get_config, get_web_url
 
 
 class ZabbixHostPanel(PluginTemplateExtension):
@@ -23,4 +23,7 @@ class ZabbixHostPanel(PluginTemplateExtension):
         })
 
 
-template_extensions = (ZabbixHostPanel,)
+# Pri vypnutom párovaní nemá panel na Device/VM čo ukázať — neregistruje sa
+template_extensions = (
+    (ZabbixHostPanel,) if get_config().get('matching_enabled', True) else ()
+)

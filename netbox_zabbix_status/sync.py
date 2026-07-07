@@ -171,9 +171,13 @@ def run_sync():
     problems, trigger_hosts = fetch_problems(api, int(cfg.get('min_severity', 2)))
     proxy_names = fetch_proxy_names(api)
 
-    matcher = build_matcher(cfg)
+    # matching_enabled=False -> čistý Zabbix viewer: väzby sa nevytvárajú ani
+    # nemenia (existujúce zostávajú v DB nedotknuté, prepnutie späť je bezstratové)
+    matching_enabled = bool(cfg.get('matching_enabled', True))
+    matcher = build_matcher(cfg) if matching_enabled else None
     now = timezone.now()
     stats = {
+        'matching_enabled': matching_enabled,
         'hosts_total': len(zabbix_hosts),
         'matched_name': 0,
         'matched_ip': 0,
@@ -224,7 +228,9 @@ def run_sync():
             # Väzba: manuálnu nikdy neprepisuj; existujúcu automatickú s platným
             # cieľom nechaj (stabilita pri premenovaní); inak skús spárovať.
             has_target = bool(obj.device_id or obj.virtual_machine_id)
-            if obj.match_method == MatchMethodChoices.MANUAL and has_target:
+            if matcher is None:
+                pass
+            elif obj.match_method == MatchMethodChoices.MANUAL and has_target:
                 stats['matched_manual'] += 1
             elif obj.pk and has_target and obj.match_method in (
                 MatchMethodChoices.NAME, MatchMethodChoices.IP

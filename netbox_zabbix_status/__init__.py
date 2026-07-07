@@ -23,6 +23,13 @@ class ZabbixStatusConfig(PluginConfig):
         'hostname_strip_domains': [],
         'match_by_ip': True,
         'sync_vms': True,
+        # False = čistý Zabbix viewer: žiadne párovanie/porovnávanie s NetBoxom
+        # (skryje panel/tab na zariadeniach, konzistenčné pohľady a NetBox stĺpce)
+        'matching_enabled': True,
+        # Dashboard: len spárované hosty (True) alebo všetky (False)
+        'dashboard_matched_only': True,
+        # Auto-refresh dashboardu v sekundách (0 = vypnutý)
+        'dashboard_refresh': 60,
     }
 
     def ready(self):

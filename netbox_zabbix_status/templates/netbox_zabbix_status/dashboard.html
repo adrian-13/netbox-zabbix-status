@@ -67,7 +67,7 @@
         <h2 class="card-header">
           Hostia s problémami
           <div class="card-actions">
-            <a href="{{ hosts_url }}?is_matched=true&has_problems=true" class="btn btn-ghost-primary btn-sm">
+            <a href="{{ hosts_url }}{{ hosts_scope_qs }}has_problems=true" class="btn btn-ghost-primary btn-sm">
               Všetci <i class="mdi mdi-arrow-right"></i>
             </a>
           </div>
@@ -86,7 +86,9 @@
               <tr>
                 <td>
                   <a href="{{ h.get_absolute_url }}">{{ h }}</a>
-                  <div class="small text-muted">{{ h.assigned_object|linkify }}</div>
+                  {% if h.assigned_object %}
+                    <div class="small text-muted">{{ h.assigned_object|linkify }}</div>
+                  {% endif %}
                 </td>
                 <td>{{ h.site|linkify|placeholder }}</td>
                 <td>
@@ -143,7 +145,13 @@
               <tr>
                 <td>{% badge p.get_severity_display bg_color=p.get_severity_color %}</td>
                 <td class="text-nowrap" title="{{ p.started }}">{{ p.started|timesince }}</td>
-                <td>{{ p.host.assigned_object|linkify }}</td>
+                <td>
+                  {% if p.host.assigned_object %}
+                    {{ p.host.assigned_object|linkify }}
+                  {% else %}
+                    <a href="{{ p.host.get_absolute_url }}">{{ p.host }}</a>
+                  {% endif %}
+                </td>
                 <td>
                   {{ p.name }}
                   {% if p.opdata %}<div class="small text-muted">{{ p.opdata }}</div>{% endif %}
@@ -172,12 +180,14 @@
   <div class="text-muted small mt-2">
     <i class="mdi mdi-sync"></i>
     Posledný sync: {% if last_synced %}<span title="{{ last_synced }}">pred {{ last_synced|timesince }}</span>{% else %}zatiaľ žiadny{% endif %}
-    · zobrazené sú len spárované hosty
-    · stránka sa obnovuje každých 60 s
+    · {{ scope_note }}
+    {% if refresh %}· stránka sa obnovuje každých {{ refresh }} s{% endif %}
   </div>
 
-  <script>
-    // Auto-refresh dashboardu (monitoring view)
-    setTimeout(function () { window.location.reload(); }, 60000);
-  </script>
+  {% if refresh %}
+    <script>
+      // Auto-refresh dashboardu (monitoring view)
+      setTimeout(function () { window.location.reload(); }, {{ refresh }} * 1000);
+    </script>
+  {% endif %}
 {% endblock %}

@@ -32,7 +32,10 @@ SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
 
 def _zabbix_tab_badge(instance):
     """Badge = počet problémov ako string ('0' je truthy, takže tab zostane
-    viditeľný aj bez problémov); None pre nespárované objekty tab skryje."""
+    viditeľný aj bez problémov); None pre nespárované objekty tab skryje.
+    Pri vypnutom párovaní sa tab neukazuje vôbec."""
+    if not get_config().get('matching_enabled', True):
+        return None
     host = instance.zabbix_hosts.first()
     if host is None:
         return None
@@ -176,16 +179,26 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
 
     def get(self, request):
         cfg = get_config()
+        matching_enabled = bool(cfg.get('matching_enabled', True))
+        matched_only = matching_enabled and bool(cfg.get('dashboard_matched_only', True))
+
         matched = ZabbixHost.objects.filter(
             Q(device__isnull=False) | Q(virtual_machine__isnull=False)
         )
-        problems = ZabbixProblem.objects.filter(host__in=matched)
+        if matched_only:
+            hosts = matched
+            scope_note = 'zobrazené sú len spárované hosty'
+        else:
+            hosts = ZabbixHost.objects.all()
+            scope_note = 'zobrazené sú všetky hosty zo Zabbixu'
+        problems = ZabbixProblem.objects.filter(host__in=hosts)
 
         severity_counts = dict(
             problems.values_list('severity').annotate(n=Count('pk'))
         )
         problems_url = reverse('plugins:netbox_zabbix_status:zabbixproblem_list')
         hosts_url = reverse('plugins:netbox_zabbix_status:zabbixhost_list')
+        scope_qs = '?is_matched=true&' if matched_only else '?'
 
         severity_tiles = [
             {
@@ -197,28 +210,38 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
             for severity, label in reversed(SeverityChoices.CHOICES)
         ]
 
-        stats = [
-            {'label': 'Spárované hosty', 'value': matched.count(),
-             'icon': 'mdi-server', 'url': f'{hosts_url}?is_matched=true'},
-            {'label': 'S problémami', 'value': matched.filter(problem_count__gt=0).count(),
-             'icon': 'mdi-alert-circle-outline',
-             'url': f'{hosts_url}?is_matched=true&has_problems=true'},
+        stats = []
+        if matching_enabled:
+            stats.append({'label': 'Spárované hosty', 'value': matched.count(),
+                          'icon': 'mdi-server', 'url': f'{hosts_url}?is_matched=true'})
+        else:
+            stats.append({'label': 'Hosty', 'value': hosts.count(),
+                          'icon': 'mdi-server', 'url': hosts_url})
+        stats += [
+            {'label': 'S problémami', 'value': hosts.filter(problem_count__gt=0).count(),
+             'icon': 'mdi-alert-circle-outline', 'url': f'{hosts_url}{scope_qs}has_problems=true'},
             {'label': 'Agent down',
-             'value': matched.filter(agent_available=AvailabilityChoices.DOWN).count(),
-             'icon': 'mdi-lan-disconnect', 'url': f'{hosts_url}?agent_available=down'},
+             'value': hosts.filter(agent_available=AvailabilityChoices.DOWN).count(),
+             'icon': 'mdi-lan-disconnect', 'url': f'{hosts_url}{scope_qs}agent_available=down'},
             {'label': 'SNMP down',
-             'value': matched.filter(snmp_available=AvailabilityChoices.DOWN).count(),
-             'icon': 'mdi-access-point-off', 'url': f'{hosts_url}?snmp_available=down'},
-            {'label': 'Maintenance', 'value': matched.filter(in_maintenance=True).count(),
-             'icon': 'mdi-wrench', 'url': f'{hosts_url}?in_maintenance=true'},
-            {'label': 'Nespárované',
-             'value': ZabbixHost.objects.filter(
-                 device__isnull=True, virtual_machine__isnull=True).count(),
-             'icon': 'mdi-link-off',
-             'url': reverse('plugins:netbox_zabbix_status:unmatched_hosts')},
+             'value': hosts.filter(snmp_available=AvailabilityChoices.DOWN).count(),
+             'icon': 'mdi-access-point-off', 'url': f'{hosts_url}{scope_qs}snmp_available=down'},
+            {'label': 'Maintenance', 'value': hosts.filter(in_maintenance=True).count(),
+             'icon': 'mdi-wrench', 'url': f'{hosts_url}{scope_qs}in_maintenance=true'},
         ]
+        if matching_enabled:
+            stats.append({'label': 'Nespárované',
+                          'value': ZabbixHost.objects.filter(
+                              device__isnull=True, virtual_machine__isnull=True).count(),
+                          'icon': 'mdi-link-off',
+                          'url': reverse('plugins:netbox_zabbix_status:unmatched_hosts')})
+        else:
+            stats.append({'label': 'Vypnuté',
+                          'value': hosts.filter(status='disabled').count(),
+                          'icon': 'mdi-power-plug-off',
+                          'url': f'{hosts_url}{scope_qs}status=disabled'})
 
-        top_hosts = matched.filter(problem_count__gt=0).order_by(
+        top_hosts = hosts.filter(problem_count__gt=0).order_by(
             '-max_severity', '-problem_count', 'name'
         ).prefetch_related('device__site', 'virtual_machine__site')[:12]
 
@@ -243,6 +266,9 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
             'recent_problems': recent_problems,
             'problems_url': problems_url,
             'hosts_url': hosts_url,
+            'hosts_scope_qs': scope_qs,
+            'scope_note': scope_note,
+            'refresh': max(0, int(cfg.get('dashboard_refresh', 60))),
             'last_synced': last_synced,
             'sync_stale': sync_stale,
             'web_url': get_web_url(),

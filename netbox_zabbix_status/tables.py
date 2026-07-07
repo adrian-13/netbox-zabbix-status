@@ -3,6 +3,28 @@ import django_tables2 as tables
 from netbox.tables import NetBoxTable, columns
 
 from .models import ZabbixHost, ZabbixProblem
+from .zabbix import get_config
+
+_MATCHING_ENABLED = get_config().get('matching_enabled', True)
+
+if _MATCHING_ENABLED:
+    _HOST_DEFAULT_COLUMNS = (
+        'name', 'device', 'virtual_machine', 'status', 'match_method',
+        'problem_count', 'max_severity', 'last_synced',
+    )
+    _PROBLEM_DEFAULT_COLUMNS = (
+        'severity', 'name', 'device', 'virtual_machine', 'site',
+        'acknowledged', 'started',
+    )
+else:
+    # Čistý Zabbix viewer — NetBox stĺpce sú default skryté (dajú sa zapnúť ručne)
+    _HOST_DEFAULT_COLUMNS = (
+        'name', 'visible_name', 'status', 'agent_available', 'snmp_available',
+        'problem_count', 'max_severity', 'last_synced',
+    )
+    _PROBLEM_DEFAULT_COLUMNS = (
+        'severity', 'name', 'host', 'acknowledged', 'started', 'opdata',
+    )
 
 SEVERITY_BADGE = """
 {% load helpers %}
@@ -48,10 +70,7 @@ class ZabbixHostTable(NetBoxTable):
             'active_available', 'in_maintenance', 'proxy_name', 'problem_count',
             'max_severity', 'last_synced', 'tags',
         )
-        default_columns = (
-            'name', 'device', 'virtual_machine', 'status', 'match_method',
-            'problem_count', 'max_severity', 'last_synced',
-        )
+        default_columns = _HOST_DEFAULT_COLUMNS
 
 
 class ZabbixProblemTable(NetBoxTable):
@@ -74,7 +93,4 @@ class ZabbixProblemTable(NetBoxTable):
             'pk', 'id', 'severity', 'name', 'host', 'device', 'virtual_machine',
             'site', 'acknowledged', 'started', 'opdata',
         )
-        default_columns = (
-            'severity', 'name', 'device', 'virtual_machine', 'site',
-            'acknowledged', 'started',
-        )
+        default_columns = _PROBLEM_DEFAULT_COLUMNS
