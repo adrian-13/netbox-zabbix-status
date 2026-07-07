@@ -65,13 +65,17 @@ def get_live_problems(hostid: int) -> list:
         return cached
 
     api = get_client()
-    problems = api.problem.get(
+    params = dict(
         hostids=[hostid],
-        output=['eventid', 'name', 'severity', 'acknowledged', 'clock', 'opdata'],
+        output=['eventid', 'name', 'severity', 'acknowledged', 'suppressed',
+                'clock', 'opdata'],
         selectTags='extend',
         severities=list(range(int(get_setting('min_severity', 2)), 6)),
         recent=False,
         sortfield='eventid',
     )
+    if not get_setting('include_suppressed', False):
+        params['suppressed'] = False
+    problems = api.problem.get(**params)
     cache.set(cache_key, problems, int(get_setting('cache_ttl', 30)))
     return problems

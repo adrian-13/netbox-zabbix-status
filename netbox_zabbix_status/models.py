@@ -48,6 +48,12 @@ class ZabbixConfiguration(models.Model):
         help_text='Problémy s nižšou severitou sa nesynchronizujú ani nezobrazujú. '
                   'Prejaví sa pri ďalšom synce.',
     )
+    include_suppressed = models.BooleanField(
+        default=False,
+        verbose_name='Zahrnúť suppressed problémy',
+        help_text='Problémy hostov v maintenance okne. Zabbix UI ich defaultne '
+                  'skrýva — vypnuté = rovnaké správanie. Prejaví sa pri ďalšom synce.',
+    )
     cache_ttl = models.PositiveIntegerField(
         default=30,
         verbose_name='Cache live dát (s)',
@@ -85,6 +91,7 @@ class ZabbixConfiguration(models.Model):
                 sync_vms=bool(cfg.get('sync_vms', True)),
                 hostname_strip_domains=list(cfg.get('hostname_strip_domains', [])),
                 min_severity=int(cfg.get('min_severity', 2)),
+                include_suppressed=bool(cfg.get('include_suppressed', False)),
                 cache_ttl=int(cfg.get('cache_ttl', 30)),
                 dashboard_matched_only=bool(cfg.get('dashboard_matched_only', True)),
                 dashboard_refresh=int(cfg.get('dashboard_refresh', 60)),
@@ -231,6 +238,10 @@ class ZabbixProblem(NetBoxModel):
         default=SeverityChoices.NOT_CLASSIFIED,
     )
     acknowledged = models.BooleanField(default=False)
+    suppressed = models.BooleanField(
+        default=False,
+        help_text='Problém hosta v maintenance okne (Zabbix ho potláča)',
+    )
     started = models.DateTimeField(null=True, blank=True)
     opdata = models.CharField(max_length=500, blank=True)
     # 'tags' koliduje s NetBoxModel.tags (TaggableManager), preto zabbix_tags

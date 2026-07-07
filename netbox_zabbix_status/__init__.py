@@ -20,6 +20,8 @@ class ZabbixStatusConfig(PluginConfig):
         'sync_interval': 5,
         'cache_ttl': 30,
         'min_severity': 2,
+        # Problémy hostov v maintenance — Zabbix UI ich defaultne skrýva
+        'include_suppressed': False,
         'hostname_strip_domains': [],
         'match_by_ip': True,
         'sync_vms': True,

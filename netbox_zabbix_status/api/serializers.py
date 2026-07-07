@@ -29,7 +29,7 @@ class ZabbixProblemSerializer(NetBoxModelSerializer):
         model = ZabbixProblem
         fields = (
             'id', 'url', 'display', 'zabbix_eventid', 'host', 'name', 'severity',
-            'acknowledged', 'started', 'opdata', 'zabbix_tags', 'tags',
-            'custom_fields', 'created', 'last_updated',
+            'acknowledged', 'suppressed', 'started', 'opdata', 'zabbix_tags',
+            'tags', 'custom_fields', 'created', 'last_updated',
         )
         brief_fields = ('id', 'url', 'display', 'zabbix_eventid', 'name', 'severity')

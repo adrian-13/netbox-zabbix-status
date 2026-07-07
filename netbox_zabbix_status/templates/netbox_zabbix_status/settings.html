@@ -26,6 +26,7 @@
           <h2 class="card-header">Synchronizácia a dáta</h2>
           <div class="card-body">
             {% render_field form.min_severity %}
+            {% render_field form.include_suppressed %}
             {% render_field form.cache_ttl %}
           </div>
           <table class="table attr-table">

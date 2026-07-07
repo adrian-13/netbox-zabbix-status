@@ -157,6 +157,7 @@
                 </td>
                 <td>
                   {{ p.name }}
+                  {% if p.suppressed %}<i class="mdi mdi-volume-off text-muted" title="Suppressed — host je v maintenance"></i>{% endif %}
                   {% if p.opdata %}<div class="small text-muted">{{ p.opdata }}</div>{% endif %}
                 </td>
                 <td>

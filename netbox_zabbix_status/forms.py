@@ -31,7 +31,8 @@ class ZabbixSettingsForm(forms.ModelForm):
         model = ZabbixConfiguration
         fields = (
             'matching_enabled', 'match_by_ip', 'sync_vms', 'min_severity',
-            'cache_ttl', 'dashboard_matched_only', 'dashboard_refresh',
+            'include_suppressed', 'cache_ttl', 'dashboard_matched_only',
+            'dashboard_refresh',
         )
 
     def __init__(self, *args, **kwargs):

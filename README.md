@@ -49,6 +49,7 @@ v `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker:
 | `sync_interval` | `5` | Interval background syncu (minúty) |
 | `cache_ttl` | `30` | TTL live cache pre device tab (sekundy) |
 | `min_severity` | `2` | Minimálna severita problémov (0–5, 2 = Warning) |
+| `include_suppressed` | `False` | Zahrnúť problémy hostov v maintenance okne (Zabbix UI ich defaultne skrýva — `False` = rovnaká parita) |
 | `hostname_strip_domains` | `[]` | Doménové suffixy odrezané pri párovaní mien |
 | `match_by_ip` | `True` | Fallback párovanie podľa IP |
 | `sync_vms` | `True` | Párovať aj na virtualization.VirtualMachine |

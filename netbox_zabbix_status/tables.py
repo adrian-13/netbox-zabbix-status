@@ -87,6 +87,7 @@ class ZabbixProblemTable(NetBoxTable):
     virtual_machine = tables.Column(accessor='host__virtual_machine', linkify=True, verbose_name='VM')
     site = tables.Column(accessor='host__site', linkify=True, orderable=False)
     acknowledged = columns.BooleanColumn(verbose_name='Ack')
+    suppressed = columns.BooleanColumn(verbose_name='Suppressed')
     started = columns.DateTimeColumn(verbose_name='Od')
     opdata = tables.Column(verbose_name='Operational data')
     actions = columns.ActionsColumn(actions=())
@@ -95,6 +96,6 @@ class ZabbixProblemTable(NetBoxTable):
         model = ZabbixProblem
         fields = (
             'pk', 'id', 'severity', 'name', 'host', 'device', 'virtual_machine',
-            'site', 'acknowledged', 'started', 'opdata',
+            'site', 'acknowledged', 'suppressed', 'started', 'opdata',
         )
         default_columns = _PROBLEM_DEFAULT_COLUMNS

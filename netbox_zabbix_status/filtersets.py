@@ -84,6 +84,7 @@ class ZabbixHostFilterSet(NetBoxModelFilterSet):
 class ZabbixProblemFilterSet(NetBoxModelFilterSet):
     severity = django_filters.MultipleChoiceFilter(choices=SeverityChoices.CHOICES)
     acknowledged = django_filters.BooleanFilter()
+    suppressed = django_filters.BooleanFilter()
     host_id = django_filters.ModelMultipleChoiceFilter(
         queryset=ZabbixHost.objects.all(), label='Zabbix host (ID)'
     )

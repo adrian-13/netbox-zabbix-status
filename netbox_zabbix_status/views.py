@@ -62,13 +62,15 @@ class ZabbixTabView(generic.ObjectView):
     )
 
     @staticmethod
-    def _problem_row(name, severity, acknowledged, started, opdata, tags):
+    def _problem_row(name, severity, acknowledged, started, opdata, tags,
+                     suppressed=False):
         return {
             'name': name,
             'severity': severity,
             'severity_label': SEVERITY_LABELS.get(severity, str(severity)),
             'severity_color': SeverityChoices.get_color(severity),
             'acknowledged': acknowledged,
+            'suppressed': suppressed,
             'started': started,
             'opdata': opdata,
             'tags': tags,
@@ -97,6 +99,7 @@ class ZabbixTabView(generic.ObjectView):
                         ),
                         opdata=p.get('opdata') or '',
                         tags=p.get('tags', []),
+                        suppressed=p.get('suppressed') == '1',
                     )
                     for p in live
                 ]
@@ -110,6 +113,7 @@ class ZabbixTabView(generic.ObjectView):
                         started=p.started,
                         opdata=p.opdata,
                         tags=p.zabbix_tags,
+                        suppressed=p.suppressed,
                     )
                     for p in host.problems.all()
                 ]

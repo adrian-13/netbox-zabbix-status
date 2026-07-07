@@ -50,17 +50,21 @@ def fetch_hosts(api):
     )
 
 
-def fetch_problems(api, min_severity):
+def fetch_problems(api, min_severity, include_suppressed):
     """Vráti (problems, trigger_hosts). problem.objectid je triggerid,
     mapovanie na hostov ide cez trigger.get."""
-    problems = api.problem.get(
+    params = dict(
         output=['eventid', 'objectid', 'name', 'severity', 'acknowledged',
-                'clock', 'opdata'],
+                'suppressed', 'clock', 'opdata'],
         selectTags='extend',
         severities=list(range(min_severity, 6)),
         recent=False,
         sortfield='eventid',
     )
+    if not include_suppressed:
+        # Parita so Zabbix UI: problémy hostov v maintenance sa defaultne skrývajú
+        params['suppressed'] = False
+    problems = api.problem.get(**params)
     trigger_hosts = {}
     trigger_ids = list({p['objectid'] for p in problems})
     if trigger_ids:
@@ -167,7 +171,11 @@ def run_sync():
     api = get_client()
 
     zabbix_hosts = fetch_hosts(api)
-    problems, trigger_hosts = fetch_problems(api, int(get_setting('min_severity', 2)))
+    problems, trigger_hosts = fetch_problems(
+        api,
+        int(get_setting('min_severity', 2)),
+        bool(get_setting('include_suppressed', False)),
+    )
     proxy_names = fetch_proxy_names(api)
 
     # matching_enabled=False -> čistý Zabbix viewer: väzby sa nevytvárajú ani
@@ -274,6 +282,7 @@ def run_sync():
             obj.name = p.get('name', '')[:500]
             obj.severity = int(p.get('severity', 0))
             obj.acknowledged = p.get('acknowledged') == '1'
+            obj.suppressed = p.get('suppressed') == '1'
             obj.started = (
                 datetime.fromtimestamp(int(p['clock']), tz=dt_timezone.utc)
                 if p.get('clock') else None
