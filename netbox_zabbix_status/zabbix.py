@@ -19,6 +19,21 @@ def get_config() -> dict:
     return settings.PLUGINS_CONFIG.get(PLUGIN_NAME, {})
 
 
+def get_setting(key, default=None):
+    """Runtime nastavenie správania: DB singleton (Zabbix → Nastavenia v UI)
+    má prednosť pred PLUGINS_CONFIG. Pri nedostupnej DB (štart, migrácie)
+    bezpečne padá na statickú konfiguráciu. Pripojenie (api_url/api_token)
+    týmto nejde — to zostáva výhradne v PLUGINS_CONFIG/env."""
+    try:
+        from .models import ZabbixConfiguration
+        obj = ZabbixConfiguration.objects.first()
+    except Exception:
+        obj = None
+    if obj is not None and hasattr(obj, key):
+        return getattr(obj, key)
+    return get_config().get(key, default)
+
+
 def get_client() -> ZabbixAPI:
     cfg = get_config()
     if not cfg.get('api_url') or not cfg.get('api_token'):
@@ -44,7 +59,6 @@ def get_live_problems(hostid: int) -> list:
     (cache_ttl sekúnd), aby opakované načítanie tabu nezaťažovalo Zabbix API.
     Chyby (nedostupné API, chýbajúca konfigurácia) nechá preletieť — volajúci
     spadne späť na DB snapshot."""
-    cfg = get_config()
     cache_key = f'{PLUGIN_NAME}:problems:{hostid}'
     cached = cache.get(cache_key)
     if cached is not None:
@@ -55,9 +69,9 @@ def get_live_problems(hostid: int) -> list:
         hostids=[hostid],
         output=['eventid', 'name', 'severity', 'acknowledged', 'clock', 'opdata'],
         selectTags='extend',
-        severities=list(range(int(cfg.get('min_severity', 2)), 6)),
+        severities=list(range(int(get_setting('min_severity', 2)), 6)),
         recent=False,
         sortfield='eventid',
     )
-    cache.set(cache_key, problems, int(cfg.get('cache_ttl', 30)))
+    cache.set(cache_key, problems, int(get_setting('cache_ttl', 30)))
     return problems

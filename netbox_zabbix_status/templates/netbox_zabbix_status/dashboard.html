@@ -5,6 +5,9 @@
 
 {% block controls %}
   <div class="btn-list">
+    <a href="{% url 'plugins:netbox_zabbix_status:settings' %}" class="btn btn-outline-secondary" title="Zabbix nastavenia">
+      <i class="mdi mdi-cog"></i>
+    </a>
     <a href="{{ request.path }}" class="btn btn-outline-secondary">
       <i class="mdi mdi-refresh"></i> Obnoviť
     </a>

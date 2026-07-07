@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone as dt_timezone
 
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Count, Q
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
@@ -22,10 +23,15 @@ from virtualization.tables import VirtualMachineTable
 
 from .choices import AvailabilityChoices, SeverityChoices
 from .filtersets import ZabbixHostFilterSet, ZabbixProblemFilterSet
-from .forms import ZabbixHostAssignForm, ZabbixHostFilterForm, ZabbixProblemFilterForm
-from .models import ZabbixHost, ZabbixProblem
+from .forms import (
+    ZabbixHostAssignForm,
+    ZabbixHostFilterForm,
+    ZabbixProblemFilterForm,
+    ZabbixSettingsForm,
+)
+from .models import ZabbixConfiguration, ZabbixHost, ZabbixProblem
 from .tables import ZabbixHostTable, ZabbixProblemTable
-from .zabbix import get_config, get_live_problems, get_web_url
+from .zabbix import get_config, get_live_problems, get_setting, get_web_url
 
 SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
 
@@ -34,7 +40,7 @@ def _zabbix_tab_badge(instance):
     """Badge = počet problémov ako string ('0' je truthy, takže tab zostane
     viditeľný aj bez problémov); None pre nespárované objekty tab skryje.
     Pri vypnutom párovaní sa tab neukazuje vôbec."""
-    if not get_config().get('matching_enabled', True):
+    if not get_setting('matching_enabled', True):
         return None
     host = instance.zabbix_hosts.first()
     if host is None:
@@ -178,9 +184,8 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
     Číta výhradne z DB snapshotu — rýchle aj pri výpadku Zabbixu."""
 
     def get(self, request):
-        cfg = get_config()
-        matching_enabled = bool(cfg.get('matching_enabled', True))
-        matched_only = matching_enabled and bool(cfg.get('dashboard_matched_only', True))
+        matching_enabled = bool(get_setting('matching_enabled', True))
+        matched_only = matching_enabled and bool(get_setting('dashboard_matched_only', True))
 
         matched = ZabbixHost.objects.filter(
             Q(device__isnull=False) | Q(virtual_machine__isnull=False)
@@ -252,7 +257,7 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
         last_synced = ZabbixHost.objects.order_by('-last_synced').values_list(
             'last_synced', flat=True
         ).first()
-        sync_interval = int(cfg.get('sync_interval', 5))
+        sync_interval = int(get_config().get('sync_interval', 5))
         sync_stale = bool(
             last_synced
             and timezone.now() - last_synced > timedelta(minutes=2 * sync_interval)
@@ -268,10 +273,37 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
             'hosts_url': hosts_url,
             'hosts_scope_qs': scope_qs,
             'scope_note': scope_note,
-            'refresh': max(0, int(cfg.get('dashboard_refresh', 60))),
+            'refresh': max(0, int(get_setting('dashboard_refresh', 60))),
             'last_synced': last_synced,
             'sync_stale': sync_stale,
             'web_url': get_web_url(),
+        })
+
+
+class ZabbixSettingsView(PermissionRequiredMixin, View):
+    """Grafická editácia runtime nastavení pluginu (Zabbix → Nastavenia).
+    Uložené hodnoty platia okamžite — číta ich get_setting() za behu."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixconfiguration'
+
+    def get(self, request):
+        form = ZabbixSettingsForm(instance=ZabbixConfiguration.get_solo())
+        return self._render(request, form)
+
+    def post(self, request):
+        form = ZabbixSettingsForm(request.POST, instance=ZabbixConfiguration.get_solo())
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Zabbix nastavenia uložené — platia okamžite.')
+            return redirect('plugins:netbox_zabbix_status:settings')
+        return self._render(request, form)
+
+    def _render(self, request, form):
+        cfg = get_config()
+        return render(request, 'netbox_zabbix_status/settings.html', {
+            'form': form,
+            'api_url': cfg.get('api_url', ''),
+            'sync_interval': cfg.get('sync_interval', 5),
         })
 
 

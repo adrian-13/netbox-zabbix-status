@@ -13,6 +13,85 @@ from .choices import (
 )
 
 
+class ZabbixConfiguration(models.Model):
+    """Runtime nastavenia pluginu (singleton riadok, editovateľný v UI).
+
+    Hodnoty majú prednosť pred PLUGINS_CONFIG — env premenné slúžia ako
+    default, kým sa nastavenia prvýkrát neuložia. Číta ich zabbix.get_setting(),
+    takže zmeny platia okamžite, bez reštartu.
+    """
+
+    matching_enabled = models.BooleanField(
+        default=True,
+        verbose_name='Párovanie s NetBoxom',
+        help_text='Vypnuté = čistý Zabbix viewer: sync nemení väzby, skryje sa '
+                  'panel/tab na zariadeniach aj konzistenčné pohľady.',
+    )
+    match_by_ip = models.BooleanField(
+        default=True,
+        verbose_name='Párovať aj podľa IP',
+        help_text='Fallback párovanie podľa jednoznačnej zhody IP adresy.',
+    )
+    sync_vms = models.BooleanField(
+        default=True,
+        verbose_name='Párovať aj virtuálne stroje',
+    )
+    hostname_strip_domains = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Odrezávané domény',
+        help_text='Doménové suffixy odrezané z mien pri párovaní.',
+    )
+    min_severity = models.PositiveSmallIntegerField(
+        choices=SeverityChoices.CHOICES,
+        default=SeverityChoices.WARNING,
+        verbose_name='Minimálna severita',
+        help_text='Problémy s nižšou severitou sa nesynchronizujú ani nezobrazujú. '
+                  'Prejaví sa pri ďalšom synce.',
+    )
+    cache_ttl = models.PositiveIntegerField(
+        default=30,
+        verbose_name='Cache live dát (s)',
+        help_text='Ako dlho sa držia live problémy z API v cache pre tab na zariadení.',
+    )
+    dashboard_matched_only = models.BooleanField(
+        default=True,
+        verbose_name='Dashboard len spárované hosty',
+        help_text='Vypnuté = dashboard zobrazuje všetky hosty zo Zabbixu.',
+    )
+    dashboard_refresh = models.PositiveIntegerField(
+        default=60,
+        verbose_name='Auto-refresh dashboardu (s)',
+        help_text='0 = bez automatického obnovovania.',
+    )
+
+    class Meta:
+        verbose_name = 'Zabbix nastavenia'
+        verbose_name_plural = 'Zabbix nastavenia'
+
+    def __str__(self):
+        return 'Zabbix nastavenia'
+
+    @classmethod
+    def get_solo(cls):
+        """Vráti (a pri prvom použití založí) singleton riadok, seedovaný
+        z aktuálnej PLUGINS_CONFIG konfigurácie."""
+        obj = cls.objects.first()
+        if obj is None:
+            from .zabbix import get_config
+            cfg = get_config()
+            obj = cls.objects.create(
+                matching_enabled=bool(cfg.get('matching_enabled', True)),
+                match_by_ip=bool(cfg.get('match_by_ip', True)),
+                sync_vms=bool(cfg.get('sync_vms', True)),
+                hostname_strip_domains=list(cfg.get('hostname_strip_domains', [])),
+                min_severity=int(cfg.get('min_severity', 2)),
+                cache_ttl=int(cfg.get('cache_ttl', 30)),
+                dashboard_matched_only=bool(cfg.get('dashboard_matched_only', True)),
+                dashboard_refresh=int(cfg.get('dashboard_refresh', 60)),
+            )
+        return obj
+
+
 class ZabbixHost(NetBoxModel):
     """Snapshot Zabbix hosta, plnený background sync jobom (read-only voči Zabbixu).
 

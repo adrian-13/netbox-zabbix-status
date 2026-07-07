@@ -8,13 +8,45 @@ from utilities.forms.rendering import FieldSet
 from virtualization.models import VirtualMachine
 
 from .choices import MatchMethodChoices, SeverityChoices, ZabbixHostStatusChoices
-from .models import ZabbixHost, ZabbixProblem
+from .models import ZabbixConfiguration, ZabbixHost, ZabbixProblem
 
 BOOLEAN_CHOICES = (
     ('', '---------'),
     ('true', 'Áno'),
     ('false', 'Nie'),
 )
+
+
+class ZabbixSettingsForm(forms.ModelForm):
+    """Editácia runtime nastavení pluginu (singleton ZabbixConfiguration)."""
+
+    strip_domains = forms.CharField(
+        required=False,
+        label='Odrezávané domény',
+        help_text='Čiarkou oddelené doménové suffixy odrezávané pri párovaní mien, '
+                  'napr. „kinet.sk, firma.local".',
+    )
+
+    class Meta:
+        model = ZabbixConfiguration
+        fields = (
+            'matching_enabled', 'match_by_ip', 'sync_vms', 'min_severity',
+            'cache_ttl', 'dashboard_matched_only', 'dashboard_refresh',
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['strip_domains'].initial = ', '.join(
+                self.instance.hostname_strip_domains
+            )
+
+    def save(self, *args, **kwargs):
+        raw = self.cleaned_data.get('strip_domains', '')
+        self.instance.hostname_strip_domains = [
+            d.strip().strip('.') for d in raw.split(',') if d.strip()
+        ]
+        return super().save(*args, **kwargs)
 
 
 class ZabbixHostAssignForm(NetBoxModelForm):

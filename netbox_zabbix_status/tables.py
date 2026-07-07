@@ -3,9 +3,11 @@ import django_tables2 as tables
 from netbox.tables import NetBoxTable, columns
 
 from .models import ZabbixHost, ZabbixProblem
-from .zabbix import get_config
+from .zabbix import get_setting
 
-_MATCHING_ENABLED = get_config().get('matching_enabled', True)
+# Číta sa pri štarte (definícia tabuliek) — zmena nastavenia v UI sa na default
+# stĺpcoch prejaví po reštarte; používateľ si stĺpce vie prepnúť aj sám.
+_MATCHING_ENABLED = get_setting('matching_enabled', True)
 
 if _MATCHING_ENABLED:
     _HOST_DEFAULT_COLUMNS = (

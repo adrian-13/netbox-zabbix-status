@@ -20,7 +20,7 @@ from virtualization.models import VirtualMachine, VMInterface
 from .choices import AvailabilityChoices, MatchMethodChoices, ZabbixHostStatusChoices
 from .matching import HostMatcher, normalize_hostname
 from .models import ZabbixHost, ZabbixProblem
-from .zabbix import get_client, get_config
+from .zabbix import get_client, get_setting
 
 logger = logging.getLogger('netbox.plugins.netbox_zabbix_status')
 
@@ -107,10 +107,10 @@ def worst_availability(values):
     return AvailabilityChoices.UNKNOWN
 
 
-def build_matcher(cfg):
+def build_matcher():
     """Postaví HostMatcher z aktuálneho obsahu NetBox DB."""
-    strip_domains = cfg.get('hostname_strip_domains', [])
-    sync_vms = cfg.get('sync_vms', True)
+    strip_domains = get_setting('hostname_strip_domains', []) or []
+    sync_vms = bool(get_setting('sync_vms', True))
 
     device_names = {}
     for pk, name in Device.objects.exclude(name=None).exclude(name='').values_list('pk', 'name'):
@@ -157,24 +157,23 @@ def build_matcher(cfg):
         primary_ips=primary_ips,
         any_ips=any_ips,
         strip_domains=strip_domains,
-        match_by_ip=cfg.get('match_by_ip', True),
+        match_by_ip=bool(get_setting('match_by_ip', True)),
     )
 
 
 def run_sync():
     """Stiahne stav zo Zabbixu a zapíše ho do plugin modelov. Vráti štatistiky."""
     started = time.monotonic()
-    cfg = get_config()
     api = get_client()
 
     zabbix_hosts = fetch_hosts(api)
-    problems, trigger_hosts = fetch_problems(api, int(cfg.get('min_severity', 2)))
+    problems, trigger_hosts = fetch_problems(api, int(get_setting('min_severity', 2)))
     proxy_names = fetch_proxy_names(api)
 
     # matching_enabled=False -> čistý Zabbix viewer: väzby sa nevytvárajú ani
     # nemenia (existujúce zostávajú v DB nedotknuté, prepnutie späť je bezstratové)
-    matching_enabled = bool(cfg.get('matching_enabled', True))
-    matcher = build_matcher(cfg) if matching_enabled else None
+    matching_enabled = bool(get_setting('matching_enabled', True))
+    matcher = build_matcher() if matching_enabled else None
     now = timezone.now()
     stats = {
         'matching_enabled': matching_enabled,

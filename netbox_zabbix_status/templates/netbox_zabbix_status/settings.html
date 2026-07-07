@@ -1,0 +1,62 @@
+{% extends 'generic/_base.html' %}
+{% load form_helpers %}
+
+{% block title %}Zabbix nastavenia{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col col-12 col-xl-7">
+      <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="card">
+          <h2 class="card-header">Párovanie s NetBoxom</h2>
+          <div class="card-body">
+            {% render_field form.matching_enabled %}
+            {% render_field form.match_by_ip %}
+            {% render_field form.sync_vms %}
+            {% render_field form.strip_domains %}
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-header">Synchronizácia a dáta</h2>
+          <div class="card-body">
+            {% render_field form.min_severity %}
+            {% render_field form.cache_ttl %}
+          </div>
+          <table class="table attr-table">
+            <tr>
+              <th scope="row">Zabbix API</th>
+              <td><code>{{ api_url }}</code> <span class="text-muted small">(env ZABBIX_API_URL)</span></td>
+            </tr>
+            <tr>
+              <th scope="row">Interval syncu</th>
+              <td>{{ sync_interval }} min <span class="text-muted small">(PLUGINS_CONFIG, zmena vyžaduje reštart)</span></td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2 class="card-header">Dashboard</h2>
+          <div class="card-body">
+            {% render_field form.dashboard_matched_only %}
+            {% render_field form.dashboard_refresh %}
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center my-3">
+          <div class="text-muted small">
+            Zmeny platia okamžite; len predvolené stĺpce zoznamov sa preberú po reštarte NetBoxu.
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="mdi mdi-content-save"></i> Uložiť
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

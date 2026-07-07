@@ -1,30 +1,26 @@
 from netbox.plugins import PluginMenu, PluginMenuItem
 
-from .zabbix import get_config
-
-_groups = [
-    ('Monitoring', (
-        PluginMenuItem(
-            link='plugins:netbox_zabbix_status:dashboard',
-            link_text='Dashboard',
-            permissions=['netbox_zabbix_status.view_zabbixhost'],
-        ),
-        PluginMenuItem(
-            link='plugins:netbox_zabbix_status:zabbixhost_list',
-            link_text='Hosty',
-            permissions=['netbox_zabbix_status.view_zabbixhost'],
-        ),
-        PluginMenuItem(
-            link='plugins:netbox_zabbix_status:zabbixproblem_list',
-            link_text='Problémy',
-            permissions=['netbox_zabbix_status.view_zabbixproblem'],
-        ),
-    )),
-]
-
-# Konzistenčné pohľady majú zmysel len pri zapnutom párovaní s NetBoxom
-if get_config().get('matching_enabled', True):
-    _groups.append(
+menu = PluginMenu(
+    label='Zabbix',
+    icon_class='mdi mdi-radar',
+    groups=(
+        ('Monitoring', (
+            PluginMenuItem(
+                link='plugins:netbox_zabbix_status:dashboard',
+                link_text='Dashboard',
+                permissions=['netbox_zabbix_status.view_zabbixhost'],
+            ),
+            PluginMenuItem(
+                link='plugins:netbox_zabbix_status:zabbixhost_list',
+                link_text='Hosty',
+                permissions=['netbox_zabbix_status.view_zabbixhost'],
+            ),
+            PluginMenuItem(
+                link='plugins:netbox_zabbix_status:zabbixproblem_list',
+                link_text='Problémy',
+                permissions=['netbox_zabbix_status.view_zabbixproblem'],
+            ),
+        )),
         ('Konzistencia', (
             PluginMenuItem(
                 link='plugins:netbox_zabbix_status:unmonitored_devices',
@@ -41,11 +37,13 @@ if get_config().get('matching_enabled', True):
                 link_text='Nespárované hosty',
                 permissions=['netbox_zabbix_status.view_zabbixhost'],
             ),
-        ))
-    )
-
-menu = PluginMenu(
-    label='Zabbix',
-    icon_class='mdi mdi-radar',
-    groups=tuple(_groups),
+        )),
+        ('Konfigurácia', (
+            PluginMenuItem(
+                link='plugins:netbox_zabbix_status:settings',
+                link_text='Nastavenia',
+                permissions=['netbox_zabbix_status.change_zabbixconfiguration'],
+            ),
+        )),
+    ),
 )

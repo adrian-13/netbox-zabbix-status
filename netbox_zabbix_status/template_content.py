@@ -1,6 +1,6 @@
 from netbox.plugins import PluginTemplateExtension
 
-from .zabbix import get_config, get_web_url
+from .zabbix import get_setting, get_web_url
 
 
 class ZabbixHostPanel(PluginTemplateExtension):
@@ -10,6 +10,9 @@ class ZabbixHostPanel(PluginTemplateExtension):
     models = ('dcim.device', 'virtualization.virtualmachine')
 
     def right_page(self):
+        # Runtime check — pri vypnutom párovaní panel zmizne okamžite, bez reštartu
+        if not get_setting('matching_enabled', True):
+            return ''
         obj = self.context['object']
         host = obj.zabbix_hosts.first()
         web_url = get_web_url()
@@ -23,7 +26,4 @@ class ZabbixHostPanel(PluginTemplateExtension):
         })
 
 
-# Pri vypnutom párovaní nemá panel na Device/VM čo ukázať — neregistruje sa
-template_extensions = (
-    (ZabbixHostPanel,) if get_config().get('matching_enabled', True) else ()
-)
+template_extensions = (ZabbixHostPanel,)

@@ -30,8 +30,15 @@ webhook receiver (problém → Journal), GraphQL.
 
 ## Konfigurácia
 
-V `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker: `configuration/plugins.py`,
-hodnoty cez env v `env/netbox.env`):
+**Nastavenia správania sa editujú graficky v UI: menu Zabbix → Nastavenia**
+(párovanie, min. severita, cache, dashboard). Uložené hodnoty sa držia v DB
+(model `ZabbixConfiguration`), majú prednosť pred PLUGINS_CONFIG a **platia
+okamžite bez reštartu**. Env/PLUGINS_CONFIG hodnoty slúžia ako default, kým sa
+nastavenia prvýkrát neuložia.
+
+Pripojenie (API URL, token) a interval syncu zostávajú výhradne
+v `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker:
+`configuration/plugins.py`, hodnoty cez env v `env/zabbix.env`):
 
 | Kľúč | Default | Význam |
 |---|---|---|
