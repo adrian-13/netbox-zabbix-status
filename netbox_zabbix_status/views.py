@@ -33,14 +33,35 @@ from .models import ZabbixConfiguration, ZabbixHost, ZabbixProblem
 from .sync import run_sync
 from .tables import ZabbixHostTable, ZabbixProblemTable
 from .zabbix import (
+    HISTORY_LIMIT,
     ZabbixConfigError,
     get_config,
     get_live_problems,
+    get_problem_history,
     get_setting,
     get_web_url,
 )
 
 SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
+
+# História problémov na device tabe: rýchle voliteľné rozsahy + vlastný rozsah.
+# Filtrované podľa času VZNIKU problému (nie prekrytia s oknom) — jednoduchá,
+# jednoznačná sémantika bez drahého overlap dopytu na históriu celého hosta.
+HISTORY_RANGE_CHOICES = (
+    ('1h', '1 h'),
+    ('6h', '6 h'),
+    ('24h', '24 h'),
+    ('7d', '7 dní'),
+    ('30d', '30 dní'),
+)
+HISTORY_RANGE_DELTAS = {
+    '1h': timedelta(hours=1),
+    '6h': timedelta(hours=6),
+    '24h': timedelta(hours=24),
+    '7d': timedelta(days=7),
+    '30d': timedelta(days=30),
+}
+DEFAULT_HISTORY_RANGE = '24h'
 
 
 def _zabbix_tab_badge(instance):
@@ -81,6 +102,24 @@ class ZabbixTabView(generic.ObjectView):
             'started': started,
             'opdata': opdata,
             'tags': tags,
+        }
+
+    @staticmethod
+    def _history_row(ev):
+        severity = int(ev.get('severity', 0))
+        started = datetime.fromtimestamp(int(ev['clock']), tz=dt_timezone.utc)
+        r_clock = int(ev.get('r_clock', 0) or 0)
+        resolved = r_clock > 0
+        return {
+            'name': ev.get('name', ''),
+            'severity': severity,
+            'severity_label': SEVERITY_LABELS.get(severity, str(severity)),
+            'severity_color': SeverityChoices.get_color(severity),
+            'acknowledged': ev.get('acknowledged') == '1',
+            'started': started,
+            'ended': datetime.fromtimestamp(r_clock, tz=dt_timezone.utc) if resolved else None,
+            'resolved': resolved,
+            'tags': ev.get('tags', []),
         }
 
     def get_extra_context(self, request, instance):
@@ -125,6 +164,58 @@ class ZabbixTabView(generic.ObjectView):
                     for p in host.problems.all()
                 ]
 
+        history_rows, history_error, history_truncated = [], None, False
+        range_key = request.GET.get('range', DEFAULT_HISTORY_RANGE)
+        custom_from = request.GET.get('from', '')
+        custom_till = request.GET.get('till', '')
+
+        if host:
+            # "now" sa pre preset rozsahy zaokrúhli na cache_ttl bucket, aby
+            # opakované načítanie tej istej stránky trafilo cache (inak by
+            # time_till = presná aktuálna sekunda menilo cache kľúč zakaždým)
+            cache_ttl = int(get_setting('cache_ttl', 30))
+            bucket = max(cache_ttl, 5)
+            now_ts = int(timezone.now().timestamp())
+            now_ts -= now_ts % bucket
+
+            time_from = time_till = None
+            if custom_from or custom_till:
+                range_key = 'custom'
+                try:
+                    time_from = (
+                        int(datetime.strptime(custom_from, '%Y-%m-%dT%H:%M')
+                            .replace(tzinfo=dt_timezone.utc).timestamp())
+                        if custom_from else now_ts - int(timedelta(days=7).total_seconds())
+                    )
+                    time_till = (
+                        int(datetime.strptime(custom_till, '%Y-%m-%dT%H:%M')
+                            .replace(tzinfo=dt_timezone.utc).timestamp())
+                        if custom_till else now_ts
+                    )
+                    if time_from >= time_till:
+                        raise ValueError('Od musí byť pred Do')
+                except ValueError:
+                    history_error = 'Neplatný časový rozsah — skontroluj zadané dátumy.'
+            else:
+                if range_key not in HISTORY_RANGE_DELTAS:
+                    range_key = DEFAULT_HISTORY_RANGE
+                time_till = now_ts
+                time_from = now_ts - int(HISTORY_RANGE_DELTAS[range_key].total_seconds())
+
+            if history_error is None:
+                try:
+                    events = get_problem_history(host.zabbix_hostid, time_from, time_till)
+                except Exception as e:
+                    history_error = f'{type(e).__name__}: {e}'
+                else:
+                    history_truncated = len(events) >= HISTORY_LIMIT
+                    history_rows = [self._history_row(ev) for ev in events]
+
+        history_ranges = [
+            {'key': key, 'label': label, 'active': range_key == key}
+            for key, label in HISTORY_RANGE_CHOICES
+        ]
+
         zabbix_links = {}
         web_url = get_web_url()
         if host and web_url:
@@ -139,6 +230,13 @@ class ZabbixTabView(generic.ObjectView):
             'problems': problems,
             'is_live': live is not None,
             'live_error': live_error,
+            'history_rows': history_rows,
+            'history_error': history_error,
+            'history_truncated': history_truncated,
+            'history_ranges': history_ranges,
+            'history_range_key': range_key,
+            'history_custom_from': custom_from,
+            'history_custom_till': custom_till,
             'zabbix_links': zabbix_links,
             'base_template': self.base_template,
         }

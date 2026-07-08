@@ -145,6 +145,83 @@
             </tbody>
           </table>
         </div>
+
+        <div class="card">
+          <h2 class="card-header">História problémov</h2>
+          <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <div class="btn-group btn-group-sm" role="group">
+                {% for r in history_ranges %}
+                  <a href="{{ request.path }}?range={{ r.key }}"
+                     class="btn btn-outline-secondary{% if r.active %} active{% endif %}">{{ r.label }}</a>
+                {% endfor %}
+              </div>
+              <form method="get" action="{{ request.path }}" class="d-flex align-items-center gap-1">
+                <input type="datetime-local" name="from" value="{{ history_custom_from }}"
+                       class="form-control form-control-sm" style="width: auto;">
+                <span class="text-muted small">–</span>
+                <input type="datetime-local" name="till" value="{{ history_custom_till }}"
+                       class="form-control form-control-sm" style="width: auto;">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Zobraziť</button>
+              </form>
+            </div>
+            <div class="form-text mt-1">
+              Vlastný rozsah je v UTC · zobrazené sú problémy, ktoré vznikli vo zvolenom období
+            </div>
+          </div>
+          {% if history_error %}
+            <div class="alert alert-warning m-3">
+              <i class="mdi mdi-alert"></i> {{ history_error }}
+            </div>
+          {% else %}
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Severita</th>
+                  <th>Problém</th>
+                  <th>Od</th>
+                  <th>Do</th>
+                  <th>Ack</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in history_rows %}
+                  <tr>
+                    <td>{% badge row.severity_label bg_color=row.severity_color %}</td>
+                    <td>{{ row.name }}</td>
+                    <td><span title="{{ row.started }}">{{ row.started|date:"SHORT_DATETIME_FORMAT" }}</span></td>
+                    <td>
+                      {% if row.resolved %}
+                        <span title="{{ row.ended }}">{{ row.ended|date:"SHORT_DATETIME_FORMAT" }}</span>
+                        <div class="small text-muted">trvanie {{ row.started|timesince:row.ended }}</div>
+                      {% else %}
+                        {% badge "prebieha" bg_color="orange" %}
+                        <div class="small text-muted">{{ row.started|timesince }}</div>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if row.acknowledged %}
+                        <i class="mdi mdi-check-circle text-success" title="Acknowledged"></i>
+                      {% else %}
+                        <i class="mdi mdi-circle-outline text-muted" title="Neacknowledgnuté"></i>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="5" class="text-muted">Žiadne problémy v tomto období</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% if history_truncated %}
+              <div class="card-body text-muted small border-top">
+                <i class="mdi mdi-information-outline"></i>
+                Zobrazených posledných {{ history_rows|length }} udalostí — zúž rozsah pre kompletný výpis.
+              </div>
+            {% endif %}
+          {% endif %}
+        </div>
       </div>
     </div>
   {% endif %}
