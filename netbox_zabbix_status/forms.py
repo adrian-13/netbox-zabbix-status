@@ -26,14 +26,9 @@ class ZabbixSettingsForm(forms.ModelForm):
         help_text='Čiarkou oddelené doménové suffixy odrezávané pri párovaní mien, '
                   'napr. „kinet.sk, firma.local".',
     )
-    dashboard_severities = forms.TypedMultipleChoiceField(
-        choices=SeverityChoices.CHOICES,
-        coerce=int,
-        required=False,
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
-        label='Severity na dashboarde',
-        help_text='Nič nevybrané = všetky od minimálnej severity.',
-    )
+    # dashboard_severities sa edituje priamo z gear dropdownu na dashboarde
+    # (DashboardSeveritiesView) — tu zámerne nie je, aby jedno miesto neprepisovalo
+    # výber uložený druhým.
 
     class Meta:
         model = ZabbixConfiguration
@@ -49,16 +44,12 @@ class ZabbixSettingsForm(forms.ModelForm):
             self.fields['strip_domains'].initial = ', '.join(
                 self.instance.hostname_strip_domains
             )
-            self.fields['dashboard_severities'].initial = self.instance.dashboard_severities
 
     def save(self, *args, **kwargs):
         raw = self.cleaned_data.get('strip_domains', '')
         self.instance.hostname_strip_domains = [
             d.strip().strip('.') for d in raw.split(',') if d.strip()
         ]
-        self.instance.dashboard_severities = sorted(
-            self.cleaned_data.get('dashboard_severities') or []
-        )
         return super().save(*args, **kwargs)
 
 
