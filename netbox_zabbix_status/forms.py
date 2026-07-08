@@ -30,7 +30,7 @@ class ZabbixSettingsForm(forms.ModelForm):
         choices=SeverityChoices.CHOICES,
         coerce=int,
         required=False,
-        widget=forms.CheckboxSelectMultiple,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
         label='Severity na dashboarde',
         help_text='Nič nevybrané = všetky od minimálnej severity.',
     )

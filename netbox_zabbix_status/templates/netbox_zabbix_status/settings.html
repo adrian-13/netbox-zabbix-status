@@ -45,7 +45,18 @@
           <h2 class="card-header">Dashboard</h2>
           <div class="card-body">
             {% render_field form.dashboard_matched_only %}
-            {% render_field form.dashboard_severities %}
+            <div class="row mb-3">
+              <label class="col-sm-3 col-form-label text-lg-end">{{ form.dashboard_severities.label }}</label>
+              <div class="col">
+                {% for checkbox in form.dashboard_severities %}
+                  <label class="form-check form-check-inline">
+                    {{ checkbox.tag }}
+                    <span class="form-check-label">{{ checkbox.choice_label }}</span>
+                  </label>
+                {% endfor %}
+                <div class="form-text">{{ form.dashboard_severities.help_text }}</div>
+              </div>
+            </div>
             {% render_field form.dashboard_refresh %}
           </div>
         </div>

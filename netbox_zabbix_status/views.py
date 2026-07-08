@@ -233,6 +233,16 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
             for severity, label in reversed(SeverityChoices.CHOICES)
             if severity in selected
         ]
+        # Pre gear dropdown: všetky severity, zaškrtnuté = aktuálne efektívny výber
+        severity_options = [
+            {
+                'value': severity,
+                'label': label,
+                'color': SeverityChoices.get_color(severity),
+                'checked': severity in selected,
+            }
+            for severity, label in reversed(SeverityChoices.CHOICES)
+        ]
 
         stats = []
         if matching_enabled:
@@ -295,6 +305,7 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
 
         return render(request, 'netbox_zabbix_status/dashboard.html', {
             'severity_tiles': severity_tiles,
+            'severity_options': severity_options,
             'problems_total': sum(severity_counts.values()),
             'stats': stats,
             'top_hosts': top_hosts,
@@ -308,6 +319,31 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
             'sync_stale': sync_stale,
             'web_url': get_web_url(),
         })
+
+
+class DashboardSeveritiesView(PermissionRequiredMixin, View):
+    """Rýchle uloženie výberu severít z gear dropdownu na dashboarde.
+    Zapisuje to isté nastavenie ako stránka Nastavenia (dashboard_severities)."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixconfiguration'
+
+    def post(self, request):
+        try:
+            severities = sorted({
+                int(v) for v in request.POST.getlist('severities') if 0 <= int(v) <= 5
+            })
+        except ValueError:
+            severities = []
+        config = ZabbixConfiguration.get_solo()
+        config.dashboard_severities = severities
+        config.save()
+        if severities:
+            messages.success(request, 'Výber severít na dashboarde uložený.')
+        else:
+            messages.success(
+                request, 'Výber severít zrušený — zobrazujú sa všetky od minimálnej severity.'
+            )
+        return redirect('plugins:netbox_zabbix_status:dashboard')
 
 
 class ZabbixRefreshView(LoginRequiredMixin, View):
