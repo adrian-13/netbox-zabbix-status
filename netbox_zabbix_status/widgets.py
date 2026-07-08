@@ -32,10 +32,11 @@ class ZabbixProblemsWidget(DashboardWidget):
         unmatched = ZabbixHost.objects.filter(
             device__isnull=True, virtual_machine__isnull=True
         ).count()
+        hosts_url = reverse('plugins:netbox_zabbix_status:zabbixhost_list')
         return render_to_string('netbox_zabbix_status/widgets/problems.html', {
             'rows': rows,
             'total': sum(counts.values()),
             'problems_url': problems_url,
             'unmatched': unmatched,
-            'unmatched_url': reverse('plugins:netbox_zabbix_status:unmatched_hosts'),
+            'unmatched_url': f'{hosts_url}?is_matched=false',
         })

@@ -8,18 +8,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
-from dcim.choices import DeviceStatusChoices
-from dcim.filtersets import DeviceFilterSet
-from dcim.forms import DeviceFilterForm
 from dcim.models import Device
-from dcim.tables import DeviceTable
 from netbox.views import generic
 from utilities.views import ViewTab, register_model_view
-from virtualization.choices import VirtualMachineStatusChoices
-from virtualization.filtersets import VirtualMachineFilterSet
-from virtualization.forms import VirtualMachineFilterForm
 from virtualization.models import VirtualMachine
-from virtualization.tables import VirtualMachineTable
 
 from .choices import AvailabilityChoices, SeverityChoices
 from .filtersets import ZabbixHostFilterSet, ZabbixProblemFilterSet
@@ -366,7 +358,7 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
                           'value': ZabbixHost.objects.filter(
                               device__isnull=True, virtual_machine__isnull=True).count(),
                           'icon': 'mdi-link-off',
-                          'url': reverse('plugins:netbox_zabbix_status:unmatched_hosts')})
+                          'url': f'{hosts_url}?is_matched=false'})
         else:
             stats.append({'label': 'Vypnuté',
                           'value': hosts.filter(status='disabled').count(),
@@ -495,7 +487,7 @@ class ZabbixSettingsView(PermissionRequiredMixin, View):
 
 
 #
-# Ručné párovanie a konzistenčné pohľady (M5)
+# Ručné párovanie (M5)
 #
 
 @register_model_view(ZabbixHost, 'edit')
@@ -503,37 +495,3 @@ class ZabbixHostEditView(generic.ObjectEditView):
     """Edit = len ručné priradenie hosta k zariadeniu/VM (match_method=manual)."""
     queryset = ZabbixHost.objects.all()
     form = ZabbixHostAssignForm
-
-
-class UnmatchedHostsView(ZabbixHostListView):
-    """Zabbix hosty bez väzby na NetBox — kandidáti na ručné priradenie."""
-    queryset = ZabbixHost.objects.filter(
-        device__isnull=True, virtual_machine__isnull=True
-    ).prefetch_related('tags')
-    template_name = 'netbox_zabbix_status/unmatched_hosts.html'
-
-
-class UnmonitoredDevicesView(generic.ObjectListView):
-    """Aktívne zariadenia bez Zabbix hosta — diera v monitoringu."""
-    queryset = Device.objects.filter(
-        status=DeviceStatusChoices.STATUS_ACTIVE,
-        zabbix_hosts__isnull=True,
-    ).prefetch_related('site', 'rack', 'role', 'device_type', 'primary_ip4', 'primary_ip6')
-    table = DeviceTable
-    filterset = DeviceFilterSet
-    filterset_form = DeviceFilterForm
-    template_name = 'netbox_zabbix_status/unmonitored_devices.html'
-    actions = {'export': {'view'}}
-
-
-class UnmonitoredVMsView(generic.ObjectListView):
-    """Aktívne VM bez Zabbix hosta."""
-    queryset = VirtualMachine.objects.filter(
-        status=VirtualMachineStatusChoices.STATUS_ACTIVE,
-        zabbix_hosts__isnull=True,
-    ).prefetch_related('site', 'cluster', 'role', 'primary_ip4', 'primary_ip6')
-    table = VirtualMachineTable
-    filterset = VirtualMachineFilterSet
-    filterset_form = VirtualMachineFilterForm
-    template_name = 'netbox_zabbix_status/unmonitored_vms.html'
-    actions = {'export': {'view'}}
