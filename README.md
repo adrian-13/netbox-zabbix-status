@@ -24,8 +24,9 @@ Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
 - [x] M4 — list views (Hosty, Problémy) s filtrami podľa site/tenant/roly,
   menu „Zabbix", dashboard widget, read-only REST API
   (`/api/plugins/zabbix-status/hosts/`, `/problems/`), global search
-- [x] M5 — konzistenčné pohľady (Nepokryté zariadenia / Nepokryté VM /
-  Nespárované hosty) + ručné párovanie (edit hosta → match_method=manual)
+- [x] M5 — ručné párovanie (edit hosta → match_method=manual); nespárovaných
+  hostov nájdeš filtrom `is_matched=false` v zozname Hosty (samostatné
+  konzistenčné pohľady boli po zvážení odstránené — pozri Changelog)
 
 - [x] Dashboard (menu Zabbix → Dashboard) — dlaždice problémov podľa severity,
   štatistiky dostupnosti spárovaných hostov, panely najhorších hostov
@@ -80,6 +81,14 @@ v netbox-docker (editable install) — zmeny kódu sa prejavia po reštarte
 kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí.
 
 ## Changelog
+
+### Unreleased
+- **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
+  Nepokryté VM / Nespárované hosty) aj jej pohľady; nespárovaných hostov nájdeš
+  filtrom `is_matched=false` priamo v zozname Hosty (má aj akciu úpravy priradenia).
+- Výber severít na dashboarde sa už edituje len na jednom mieste (gear dropdown
+  na dashboarde) — odstránený z formulára Nastavení, kde predtým hrozilo tiché
+  prepísanie výberu pri uložení iného nastavenia.
 
 ### v0.2.0
 - **Sync a párovanie** — background job (`sync_interval` minút) ťahá hostov a problémy
