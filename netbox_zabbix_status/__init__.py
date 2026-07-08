@@ -1,6 +1,6 @@
 from netbox.plugins import PluginConfig
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
 class ZabbixStatusConfig(PluginConfig):
@@ -8,6 +8,8 @@ class ZabbixStatusConfig(PluginConfig):
     verbose_name = 'Zabbix Status'
     description = 'Read-only zobrazenie stavu Zabbix monitoringu v NetBoxe'
     version = __version__
+    author = 'Adrián Javorček'
+    author_email = 'adrian.javorcek@gmail.com'
     base_url = 'zabbix-status'
     min_version = '4.6.0'
     # api_url/api_token zámerne nie sú required_settings — plugin sa má načítať

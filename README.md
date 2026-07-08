@@ -5,6 +5,10 @@ aktívne problémy) pri zariadeniach a VM v NetBoxe a spája ho s NetBox metadá
 (site / tenant / rola). Do Zabbixu nikdy nezapisuje — stačí API token s právami
 len na čítanie.
 
+[![NetBox](https://img.shields.io/badge/NetBox-4.6%2B-blue)](https://github.com/netbox-community/netbox)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
 Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
 
 ## Stav
@@ -74,3 +78,21 @@ docker compose exec netbox ./manage.py zabbix_check
 Repo je bind-mountnuté do kontajnerov cez `docker-compose.override.yml`
 v netbox-docker (editable install) — zmeny kódu sa prejavia po reštarte
 kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí.
+
+## Changelog
+
+### v0.2.0
+- **Sync a párovanie** — background job (`sync_interval` minút) ťahá hostov a problémy
+  zo Zabbixu a páruje ich na Device/VM podľa uloženého ID, normalizovaného mena alebo
+  jednoznačnej IP; ručné priradenia sync nikdy neprepíše.
+- **Integrácia na Device/VM** — stavový panel a tab „Zabbix" s live problémami
+  (cachované) a históriou problémov (1h/6h/24h/7d/30d/vlastný rozsah) priamo zo
+  Zabbix API — história sa v NetBoxe neukladá.
+- **Dashboard** — dlaždice podľa severity, štatistiky dostupnosti hostov, panely
+  najhorších hostov a aktívnych problémov, okamžité tlačidlo „Obnoviť zo Zabbixu".
+- **Zoznamy, API, konzistencia** — filtrovateľné zoznamy hostov/problémov
+  (site/tenant/rola), read-only REST API, pohľady na nepokryté zariadenia/VM
+  a nespárované hosty s ručným priradením.
+- **Grafické nastavenia** — celé správanie (párovanie, severity, suppressed
+  problémy, rozsah dashboardu) sa mení v UI (Zabbix → Nastavenia) a platí
+  okamžite, bez reštartu.
