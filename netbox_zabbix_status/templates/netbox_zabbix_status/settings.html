@@ -33,6 +33,7 @@
         <div class="card">
           <h2 class="card-header">Synchronizácia a dáta</h2>
           <div class="card-body">
+            {% render_field form.sync_interval %}
             {% render_field form.min_severity %}
             {% render_field form.include_suppressed %}
             {% render_field form.cache_ttl %}
@@ -40,11 +41,12 @@
           <table class="table attr-table">
             <tr>
               <th scope="row">Zabbix API</th>
-              <td><code>{{ api_url }}</code> <span class="text-muted small">(env ZABBIX_API_URL)</span></td>
-            </tr>
-            <tr>
-              <th scope="row">Interval syncu</th>
-              <td>{{ sync_interval }} min <span class="text-muted small">(PLUGINS_CONFIG, zmena vyžaduje reštart)</span></td>
+              <td>
+                <code>{{ api_url }}</code>
+                <span class="text-muted small">
+                  (env ZABBIX_API_URL — spolu s API tokenom zámerne mimo UI, pozri README)
+                </span>
+              </td>
             </tr>
           </table>
         </div>

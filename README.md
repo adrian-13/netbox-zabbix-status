@@ -38,14 +38,21 @@ webhook receiver (problém → Journal), GraphQL.
 ## Konfigurácia
 
 **Nastavenia správania sa editujú graficky v UI: menu Zabbix → Nastavenia**
-(párovanie, min. severita, cache, dashboard). Uložené hodnoty sa držia v DB
-(model `ZabbixConfiguration`), majú prednosť pred PLUGINS_CONFIG a **platia
-okamžite bez reštartu**. Env/PLUGINS_CONFIG hodnoty slúžia ako default, kým sa
-nastavenia prvýkrát neuložia.
+(sync interval, párovanie, min. severita, cache, dashboard). Uložené hodnoty sa
+držia v DB (model `ZabbixConfiguration`), majú prednosť pred PLUGINS_CONFIG a
+**platia okamžite bez reštartu** — vrátane intervalu syncu: sync job si po
+každom behu sám prehodnotí vlastný `Job.interval` podľa aktuálneho nastavenia
+(`core.jobs.JobRunner.handle` naplánuje ďalší beh podľa tejto hodnoty, nie podľa
+toho, čo bolo nastavené pri štarte workera) — najviac o jeden starý cyklus
+meškania, kým sa zmena prejaví. Env/PLUGINS_CONFIG hodnoty nižšie slúžia len
+ako seed default, kým sa nastavenia prvýkrát neuložia.
 
-Pripojenie (API URL, token) a interval syncu zostávajú výhradne
-v `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker:
-`configuration/plugins.py`, hodnoty cez env v `env/zabbix.env`):
+**Pripojenie (API URL, token) zámerne zostáva len v env**, mimo UI aj DB —
+token je secret a v tomto repe (aj v netbox-docker) sa secrets riešia cez
+gitignorované env súbory, nie cez databázu editovateľnú z UI; miešať API URL
+do DB a token do env by rozdelilo konfiguráciu pripojenia na dve miesta bez
+reálneho prínosu. Jediné, čo teda naozaj vyžaduje reštart kontajnerov
+(`docker compose up -d` / `restart`), je zmena tejto skupiny:
 
 | Kľúč | Default | Význam |
 |---|---|---|
@@ -53,6 +60,15 @@ v `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker:
 | `api_token` | `""` | Zabbix API token (read-only používateľ) |
 | `web_url` | `""` | URL Zabbix UI pre deep-linky (default = `api_url`) |
 | `verify_ssl` | `True` | Overovať TLS certifikát |
+
+Nastavuje sa v `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker:
+`configuration/plugins.py`, hodnoty cez env v `env/zabbix.env`).
+
+Zvyšok je editovateľný v UI (Zabbix → Nastavenia), tieto kľúče slúžia len
+ako seed default pred prvým uložením:
+
+| Kľúč | Default | Význam |
+|---|---|---|
 | `sync_interval` | `5` | Interval background syncu (minúty) |
 | `cache_ttl` | `30` | TTL live cache pre device tab (sekundy) |
 | `min_severity` | `2` | Minimálna severita problémov (0–5, 2 = Warning) |
@@ -64,9 +80,6 @@ v `PLUGINS_CONFIG["netbox_zabbix_status"]` (netbox-docker:
 | `dashboard_matched_only` | `True` | Dashboard zobrazuje len spárované hosty; `False` = všetky |
 | `dashboard_severities` | `[]` | Severity zobrazované v dlaždiciach a paneloch dashboardu; prázdne = všetky od `min_severity` |
 | `dashboard_refresh` | `60` | Auto-refresh dashboardu v sekundách (`0` = vypnutý) |
-
-Zmena nastavení vyžaduje reštart kontajnerov (`docker compose up -d` /
-`restart`) — PLUGINS_CONFIG sa číta pri štarte.
 
 ## Overenie spojenia
 
@@ -93,6 +106,11 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí.
   vypnuté, formulár skryje `match_by_ip`/`sync_vms`/odrezávané domény aj
   „Dashboard len spárované hosty" (nemajú v tomto režime žiadny efekt) a vysvetlí
   prečo; ich uložené hodnoty zostávajú v DB nedotknuté, kým sa párovanie znova nezapne.
+- **Interval syncu editovateľný v UI** — nový model field `sync_interval`
+  (predtým len `PLUGINS_CONFIG`/env, vyžadovalo reštart); sync job si po každom
+  behu sám prehodnotí `Job.interval` podľa aktuálneho nastavenia, takže zmena
+  platí od najbližšieho cyklu bez reštartu kontajnerov. Pripojenie (API URL,
+  token) ostáva zámerne len v env.
 
 ### v0.2.0
 - **Sync a párovanie** — background job (`sync_interval` minút) ťahá hostov a problémy

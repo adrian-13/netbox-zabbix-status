@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -21,6 +22,14 @@ class ZabbixConfiguration(models.Model):
     takže zmeny platia okamžite, bez reštartu.
     """
 
+    sync_interval = models.PositiveIntegerField(
+        default=5,
+        validators=[MinValueValidator(1)],
+        verbose_name='Interval syncu (min)',
+        help_text='Ako často sa sťahujú dáta zo Zabbixu. Zmena platí od najbližšieho '
+                  'behu — nevyžaduje reštart (sync job si po sebe prehodnotí vlastný '
+                  'interval).',
+    )
     matching_enabled = models.BooleanField(
         default=True,
         verbose_name='Párovanie s NetBoxom',
@@ -92,6 +101,7 @@ class ZabbixConfiguration(models.Model):
             from .zabbix import get_config
             cfg = get_config()
             obj = cls.objects.create(
+                sync_interval=int(cfg.get('sync_interval', 5)),
                 matching_enabled=bool(cfg.get('matching_enabled', True)),
                 match_by_ip=bool(cfg.get('match_by_ip', True)),
                 sync_vms=bool(cfg.get('sync_vms', True)),
