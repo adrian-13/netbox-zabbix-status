@@ -261,7 +261,9 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   vymazanie IP adresy pred odoslaním vytvorí len samotné zariadenie/VM bez
   rozhrania. Typ zariadenia/rolu (a ostatné povinné polia) človek doplní
   a formulár uloží sám — nič sa nezapisuje automaticky, rovnaká „human
-  confirms" filozofia ako pri ručnom párovaní.
+  confirms" filozofia ako pri ručnom párovaní. Keď má používateľ oprávnenie
+  na oba typy, formuláre „Zariadenie"/„VM" sa zobrazujú v taboch (nie pod
+  sebou), aby dva dlhé formuláre nebolo treba prescrollovať.
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
