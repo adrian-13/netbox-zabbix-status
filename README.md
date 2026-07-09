@@ -239,6 +239,11 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   rovnaká karta ako na Device/VM tabe (rýchle rozsahy 1h/6h/24h/7d/30d + vlastný
   UTC rozsah), teraz zdieľaná cez `inc/history_card.html`, aby obe miesta
   nemohli vizuálne rozísť.
+- **Priamy odkaz na problém v Zabbixe** — ikona pri každom probléme (tab
+  zariadenia, história, detail hosta, dashboard, zoznam Problémy) otvorí presne
+  ten problém priamo v Zabbixe (`tr_events.php`, rovnaký formát ako makro
+  `{EVENT.URL}`). Vyžaduje `zabbix_triggerid` na `ZabbixProblem` (migrácia 0007,
+  doplní sa pri najbližšom synce).
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
