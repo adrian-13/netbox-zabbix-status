@@ -14,13 +14,17 @@ from .choices import (
 )
 
 
-class ZabbixConfiguration(models.Model):
+class ZabbixConfiguration(NetBoxModel):
     """Runtime nastavenia pluginu (singleton riadok, editovateľný v UI).
 
     Hodnoty majú prednosť pred PLUGINS_CONFIG — env premenné slúžia ako
     default, kým sa nastavenia prvýkrát neuložia. Číta ich zabbix.get_setting(),
     takže zmeny platia okamžite, bez reštartu.
-    """
+
+    NetBoxModel (nie plain models.Model) je zámerné: dáva zadarmo Changelog
+    (kto/kedy zmenil napr. matching_enabled) cez NetBoxove ChangeLoggingMixin —
+    bez toho nie je spätne dohľadateľné, kto nastavenie prepol (stalo sa raz,
+    že matching_enabled ostalo vypnuté a nedalo sa zistiť prečo)."""
 
     sync_interval = models.PositiveIntegerField(
         default=5,
@@ -91,6 +95,9 @@ class ZabbixConfiguration(models.Model):
 
     def __str__(self):
         return 'Zabbix nastavenia'
+
+    def get_absolute_url(self):
+        return reverse('plugins:netbox_zabbix_status:settings')
 
     @classmethod
     def get_solo(cls):

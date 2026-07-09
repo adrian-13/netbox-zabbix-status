@@ -3,6 +3,15 @@
 
 {% block title %}Zabbix nastavenia{% endblock %}
 
+{% block controls %}
+  <div class="btn-list">
+    <a href="{% url 'plugins:netbox_zabbix_status:zabbixconfiguration_changelog' pk=config_pk %}"
+       class="btn btn-outline-secondary" title="Kto a kedy zmenil tieto nastavenia">
+      <i class="mdi mdi-history"></i> Changelog
+    </a>
+  </div>
+{% endblock %}
+
 {% block content %}
   <div class="row">
     <div class="col col-12 col-xl-7">

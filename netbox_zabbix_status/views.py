@@ -482,6 +482,7 @@ class ZabbixSettingsView(PermissionRequiredMixin, View):
         return render(request, 'netbox_zabbix_status/settings.html', {
             'form': form,
             'api_url': cfg.get('api_url', ''),
+            'config_pk': form.instance.pk,
         })
 
 
