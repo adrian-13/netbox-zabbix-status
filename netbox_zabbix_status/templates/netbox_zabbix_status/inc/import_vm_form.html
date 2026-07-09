@@ -1,0 +1,39 @@
+{% load form_helpers %}
+{% comment %}
+Formulár „Vytvoriť ako VM" na stránke importu Zabbix hosta (host_import.html)
+— vytiahnuté do partialu, aby ho bolo možné zobraziť buď v tabe (keď má
+používateľ oprávnenie na oba typy) alebo samostatne.
+Očakáva v kontexte: vm_form, vmiface_form, vmip_form, has_ip.
+{% endcomment %}
+<div class="card">
+  <h2 class="card-header">VM</h2>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="kind" value="vm">
+    <div class="card-body">
+      {% include 'htmx/form.html' with form=vm_form %}
+    </div>
+    {% if has_ip %}
+      <h2 class="card-header">Loopback rozhranie</h2>
+      <div class="card-body">
+        {% render_field vmiface_form.name %}
+        {% render_field vmiface_form.enabled %}
+      </div>
+      <h2 class="card-header">IP adresa</h2>
+      <div class="card-body">
+        {% render_field vmip_form.address %}
+        {% render_field vmip_form.status %}
+        {% render_field vmip_form.primary_for_parent %}
+        <div class="form-text">
+          Vymaž adresu vyššie, ak nechceš vytvárať loopback rozhranie
+          ani IP — vznikne len samotné VM.
+        </div>
+      </div>
+    {% endif %}
+    <div class="card-body">
+      <button type="submit" class="btn btn-primary">
+        <i class="mdi mdi-plus"></i> Vytvoriť VM{% if has_ip %} + rozhranie + IP{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
