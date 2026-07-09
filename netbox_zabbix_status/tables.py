@@ -55,9 +55,11 @@ ZABBIX_LINK = """
 IMPORT_LINK = """
 {% if not record.assigned_object %}
   {% if perms.dcim.add_device or perms.virtualization.add_virtualmachine %}
-    <a href="{% url 'plugins:netbox_zabbix_status:zabbixhost_import' pk=record.pk %}"
+    <a class="btn btn-sm btn-primary"
+       href="{% url 'plugins:netbox_zabbix_status:zabbixhost_import' pk=record.pk %}"
+       aria-label="Importovať do NetBoxu ako zariadenie alebo VM"
        title="Importovať do NetBoxu ako zariadenie alebo VM">
-      <i class="mdi mdi-plus-circle-outline"></i>
+      <i class="mdi mdi-plus"></i>
     </a>
   {% endif %}
 {% endif %}
