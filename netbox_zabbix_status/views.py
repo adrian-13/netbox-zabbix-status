@@ -59,9 +59,9 @@ DEFAULT_HISTORY_RANGE = '24h'
 def _zabbix_tab_badge(instance):
     """Badge = počet problémov ako string ('0' je truthy, takže tab zostane
     viditeľný aj bez problémov); None pre nespárované objekty tab skryje.
-    Pri vypnutom párovaní sa tab neukazuje vôbec."""
-    if not get_setting('matching_enabled', True):
-        return None
+    Viditeľnosť závisí výhradne od existencie spárovaného ZabbixHost —
+    matching_enabled tu nehrá žiadnu rolu (ovplyvňuje len sync job a
+    agregované/NetBox-korelačné pohľady, napr. dashboard)."""
     host = instance.zabbix_hosts.first()
     if host is None:
         return None

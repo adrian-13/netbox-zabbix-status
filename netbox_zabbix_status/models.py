@@ -37,8 +37,9 @@ class ZabbixConfiguration(NetBoxModel):
     matching_enabled = models.BooleanField(
         default=True,
         verbose_name='Párovanie s NetBoxom',
-        help_text='Vypnuté = čistý Zabbix viewer: sync nemení väzby, skryje sa '
-                  'panel/tab na zariadeniach aj konzistenčné pohľady.',
+        help_text='Vypnuté = čistý Zabbix viewer: sync prestane vytvárať nové väzby, '
+                  'dashboard a nastavenia sa prepnú na agregovaný pohľad. Panel/tab '
+                  '„Zabbix" na už spárovaných zariadeniach zostáva viditeľný.',
     )
     match_by_ip = models.BooleanField(
         default=True,

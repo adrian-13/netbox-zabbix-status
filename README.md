@@ -209,7 +209,7 @@ ako seed default pred prvým uložením:
 | `hostname_strip_domains` | `[]` | Doménové suffixy odrezané pri párovaní mien |
 | `match_by_ip` | `True` | Fallback párovanie podľa IP |
 | `sync_vms` | `True` | Párovať aj na virtualization.VirtualMachine |
-| `matching_enabled` | `True` | `False` = čistý Zabbix viewer: žiadne párovanie s NetBoxom — skryje panel/tab na zariadeniach, konzistenčné pohľady aj NetBox stĺpce v zoznamoch; existujúce väzby v DB zostávajú (prepnutie späť je bezstratové) |
+| `matching_enabled` | `True` | `False` = čistý Zabbix viewer: sync prestane vytvárať nové väzby, dashboard prepne na pohľad na všetky hosty (bez štatistiky spárovania), Nastavenia skryjú párovacie pod-voľby a v zoznamoch Hosty/Problémy sa zmenia default stĺpce (po reštarte); panel/tab „Zabbix" na Device/VM sa naďalej riadi len tým, či objekt má spárovaný ZabbixHost — týmto prepínačom sa neskrýva; existujúce väzby v DB zostávajú (prepnutie späť je bezstratové) |
 | `dashboard_matched_only` | `True` | Dashboard zobrazuje len spárované hosty; `False` = všetky |
 | `dashboard_severities` | `[]` | Severity zobrazované v dlaždiciach a paneloch dashboardu; prázdne = všetky od `min_severity` |
 | `dashboard_refresh` | `60` | Auto-refresh dashboardu v sekundách (`0` = vypnutý) |
@@ -229,6 +229,12 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   (predtým plain model bez auditu); uloženie v Zabbix → Nastavenia vytvára
   `ObjectChange` záznam (kto/kedy/z akej hodnoty na akú), dostupný cez nové
   tlačidlo „Changelog" na stránke nastavení.
+- **Oprava: panel/tab „Zabbix" na Device/VM už nezávisí od `matching_enabled`** —
+  vypnutie „Párovanie s NetBoxom" predtým skrylo panel aj tab aj na zariadeniach,
+  ktoré už mali platnú väzbu na ZabbixHost (automatickú aj ručnú). Viditeľnosť je
+  teraz daná výhradne existenciou spárovaného hosta pre daný objekt;
+  `matching_enabled` naďalej ovplyvňuje len sync job (nové automatické väzby) a
+  agregované pohľady (dashboard, sub-voľby v Nastaveniach).
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /

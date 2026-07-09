@@ -1,18 +1,18 @@
 from netbox.plugins import PluginTemplateExtension
 
-from .zabbix import get_setting, get_web_url
+from .zabbix import get_web_url
 
 
 class ZabbixHostPanel(PluginTemplateExtension):
     """Kompaktná karta so stavom monitoringu v pravom stĺpci Device/VM stránky.
-    Číta výhradne z DB snapshotu — žiadne Zabbix API volanie pri renderi."""
+    Číta výhradne z DB snapshotu — žiadne Zabbix API volanie pri renderi.
+    Panel sa zobrazuje výhradne podľa existencie spárovaného ZabbixHost —
+    matching_enabled tu nehrá žiadnu rolu (ovplyvňuje len sync job a
+    agregované/NetBox-korelačné pohľady, napr. dashboard)."""
 
     models = ('dcim.device', 'virtualization.virtualmachine')
 
     def right_page(self):
-        # Runtime check — pri vypnutom párovaní panel zmizne okamžite, bez reštartu
-        if not get_setting('matching_enabled', True):
-            return ''
         obj = self.context['object']
         host = obj.zabbix_hosts.first()
         web_url = get_web_url()
