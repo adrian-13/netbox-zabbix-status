@@ -68,7 +68,15 @@ def _zabbix_tab_badge(instance):
     return str(host.problem_count)
 
 
-def _history_row(ev):
+def _zabbix_event_url(web_url, triggerid, eventid):
+    """Priamy odkaz na konkrétny problém/event v Zabbixe (tr_events.php) —
+    rovnaký formát, aký generujú aj vstavané notifikačné makrá {EVENT.URL}."""
+    if not web_url or not triggerid or not eventid:
+        return None
+    return f'{web_url}/tr_events.php?triggerid={triggerid}&eventid={eventid}'
+
+
+def _history_row(ev, web_url=None):
     severity = int(ev.get('severity', 0))
     started = datetime.fromtimestamp(int(ev['clock']), tz=dt_timezone.utc)
     r_clock = int(ev.get('r_clock', 0) or 0)
@@ -83,6 +91,7 @@ def _history_row(ev):
         'ended': datetime.fromtimestamp(r_clock, tz=dt_timezone.utc) if resolved else None,
         'resolved': resolved,
         'tags': ev.get('tags', []),
+        'zabbix_url': _zabbix_event_url(web_url, ev.get('objectid'), ev.get('eventid')),
     }
 
 
@@ -135,7 +144,8 @@ def _build_history_context(request, host):
                 history_error = f'{type(e).__name__}: {e}'
             else:
                 history_truncated = len(events) >= HISTORY_LIMIT
-                history_rows = [_history_row(ev) for ev in events]
+                web_url = get_web_url()
+                history_rows = [_history_row(ev, web_url) for ev in events]
 
     history_ranges = [
         {'key': key, 'label': label, 'active': range_key == key}
@@ -168,7 +178,7 @@ class ZabbixTabView(generic.ObjectView):
 
     @staticmethod
     def _problem_row(name, severity, acknowledged, started, opdata, tags,
-                     suppressed=False):
+                     suppressed=False, zabbix_url=None):
         return {
             'name': name,
             'severity': severity,
@@ -179,10 +189,12 @@ class ZabbixTabView(generic.ObjectView):
             'started': started,
             'opdata': opdata,
             'tags': tags,
+            'zabbix_url': zabbix_url,
         }
 
     def get_extra_context(self, request, instance):
         host = instance.zabbix_hosts.first()
+        web_url = get_web_url()
         problems = []
         live = None
         live_error = None
@@ -205,6 +217,7 @@ class ZabbixTabView(generic.ObjectView):
                         opdata=p.get('opdata') or '',
                         tags=p.get('tags', []),
                         suppressed=p.get('suppressed') == '1',
+                        zabbix_url=_zabbix_event_url(web_url, p.get('objectid'), p.get('eventid')),
                     )
                     for p in live
                 ]
@@ -219,6 +232,7 @@ class ZabbixTabView(generic.ObjectView):
                         opdata=p.opdata,
                         tags=p.zabbix_tags,
                         suppressed=p.suppressed,
+                        zabbix_url=p.get_zabbix_url(),
                     )
                     for p in host.problems.all()
                 ]
@@ -226,7 +240,6 @@ class ZabbixTabView(generic.ObjectView):
         history_context = _build_history_context(request, host)
 
         zabbix_links = {}
-        web_url = get_web_url()
         if host and web_url:
             zabbix_links = {
                 'problems': f'{web_url}/zabbix.php?action=problem.view&hostids%5B%5D={host.zabbix_hostid}',

@@ -257,6 +257,12 @@ class ZabbixProblem(NetBoxModel):
         related_name='problems',
     )
     zabbix_eventid = models.PositiveBigIntegerField(unique=True)
+    zabbix_triggerid = models.PositiveBigIntegerField(
+        null=True, blank=True,
+        help_text='ID triggera v Zabbixe — spolu s eventid tvorí priamy odkaz na '
+                  'problém (tr_events.php). Prázdne u záznamov spred tohto poľa, '
+                  'doplní sa pri najbližšom synce.',
+    )
     name = models.CharField(max_length=500)
     severity = models.PositiveSmallIntegerField(
         choices=SeverityChoices.CHOICES,
@@ -286,3 +292,13 @@ class ZabbixProblem(NetBoxModel):
 
     def get_severity_color(self):
         return SeverityChoices.get_color(self.severity)
+
+    def get_zabbix_url(self):
+        """Priamy odkaz na tento konkrétny problém v Zabbixe (tr_events.php —
+        rovnaký formát, aký generujú aj vstavané notifikačné makrá {EVENT.URL}).
+        None, ak chýba web_url alebo triggerid (staršie záznamy pred synce)."""
+        from .zabbix import get_web_url
+        web_url = get_web_url()
+        if not web_url or not self.zabbix_triggerid:
+            return None
+        return f'{web_url}/tr_events.php?triggerid={self.zabbix_triggerid}&eventid={self.zabbix_eventid}'

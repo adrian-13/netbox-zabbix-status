@@ -18,7 +18,7 @@ if _MATCHING_ENABLED:
     # pri problémoch na nespárovaných hostoch a riadok by nemal identifikáciu
     _PROBLEM_DEFAULT_COLUMNS = (
         'severity', 'name', 'host', 'device', 'site',
-        'acknowledged', 'started',
+        'acknowledged', 'started', 'zabbix_link',
     )
 else:
     # Čistý Zabbix viewer — NetBox stĺpce sú default skryté (dajú sa zapnúť ručne)
@@ -27,7 +27,7 @@ else:
         'problem_count', 'max_severity', 'last_synced',
     )
     _PROBLEM_DEFAULT_COLUMNS = (
-        'severity', 'name', 'host', 'acknowledged', 'started', 'opdata',
+        'severity', 'name', 'host', 'acknowledged', 'started', 'opdata', 'zabbix_link',
     )
 
 SEVERITY_BADGE = """
@@ -42,6 +42,14 @@ SEVERITY_BADGE = """
 PROBLEM_SEVERITY_BADGE = """
 {% load helpers %}
 {% badge record.get_severity_display bg_color=record.get_severity_color %}
+"""
+
+ZABBIX_LINK = """
+{% if record.get_zabbix_url %}
+  <a href="{{ record.get_zabbix_url }}" target="_blank" title="Otvoriť problém v Zabbixe">
+    <i class="mdi mdi-open-in-new"></i>
+  </a>
+{% endif %}
 """
 
 
@@ -90,12 +98,15 @@ class ZabbixProblemTable(NetBoxTable):
     suppressed = columns.BooleanColumn(verbose_name='Suppressed')
     started = columns.DateTimeColumn(verbose_name='Od')
     opdata = tables.Column(verbose_name='Operational data')
+    zabbix_link = tables.TemplateColumn(
+        template_code=ZABBIX_LINK, verbose_name='', orderable=False
+    )
     actions = columns.ActionsColumn(actions=())
 
     class Meta(NetBoxTable.Meta):
         model = ZabbixProblem
         fields = (
             'pk', 'id', 'severity', 'name', 'host', 'device', 'virtual_machine',
-            'site', 'acknowledged', 'suppressed', 'started', 'opdata',
+            'site', 'acknowledged', 'suppressed', 'started', 'opdata', 'zabbix_link',
         )
         default_columns = _PROBLEM_DEFAULT_COLUMNS

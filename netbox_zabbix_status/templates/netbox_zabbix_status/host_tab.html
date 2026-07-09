@@ -114,6 +114,7 @@
                 <th>Od</th>
                 <th>Trvanie</th>
                 <th>Ack</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -134,10 +135,17 @@
                       <i class="mdi mdi-circle-outline text-muted" title="Neacknowledgnuté"></i>
                     {% endif %}
                   </td>
+                  <td>
+                    {% if p.zabbix_url %}
+                      <a href="{{ p.zabbix_url }}" target="_blank" title="Otvoriť problém v Zabbixe">
+                        <i class="mdi mdi-open-in-new"></i>
+                      </a>
+                    {% endif %}
+                  </td>
                 </tr>
               {% empty %}
                 <tr>
-                  <td colspan="5" class="text-muted">
+                  <td colspan="6" class="text-muted">
                     <i class="mdi mdi-check-circle text-success"></i> Žiadne aktívne problémy
                   </td>
                 </tr>

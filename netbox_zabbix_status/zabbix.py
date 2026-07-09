@@ -68,8 +68,10 @@ def get_live_problems(hostid: int) -> list:
     api = get_client()
     params = dict(
         hostids=[hostid],
-        output=['eventid', 'name', 'severity', 'acknowledged', 'suppressed',
-                'clock', 'opdata'],
+        # objectid = triggerid (source=trigger je jediný typ problémov, ktoré
+        # sledujeme) — potrebné na priamy odkaz na problém v Zabbixe (tr_events.php)
+        output=['eventid', 'objectid', 'name', 'severity', 'acknowledged',
+                'suppressed', 'clock', 'opdata'],
         selectTags='extend',
         severities=list(range(int(get_setting('min_severity', 2)), 6)),
         recent=False,
@@ -109,7 +111,9 @@ def get_problem_history(hostid: int, time_from: int, time_till: int) -> list:
         value=1,   # riadky vzniku problému
         time_from=time_from,
         time_till=time_till,
-        output=['eventid', 'name', 'severity', 'clock', 'r_eventid', 'acknowledged'],
+        # objectid = triggerid, potrebné na priamy odkaz na problém (tr_events.php)
+        output=['eventid', 'objectid', 'name', 'severity', 'clock', 'r_eventid',
+                'acknowledged'],
         selectTags='extend',
         severities=list(range(int(get_setting('min_severity', 2)), 6)),
         sortfield=['clock'],

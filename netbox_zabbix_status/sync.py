@@ -279,6 +279,7 @@ def run_sync():
             seen_events.add(eventid)
             obj = existing_problems.get(eventid) or ZabbixProblem(zabbix_eventid=eventid)
             obj.host = host_obj
+            obj.zabbix_triggerid = int(p['objectid']) if p.get('objectid') else None
             obj.name = p.get('name', '')[:500]
             obj.severity = int(p.get('severity', 0))
             obj.acknowledged = p.get('acknowledged') == '1'

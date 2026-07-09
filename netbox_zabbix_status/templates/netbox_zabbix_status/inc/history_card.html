@@ -1,8 +1,10 @@
 {% load helpers %}
-{# Zdieľaná karta „História problémov" — používaná v host_tab.html (Device/VM tab)
-   aj v zabbixhost.html (detail Zabbix hosta). Očakáva v kontexte: history_ranges,
-   history_custom_from, history_custom_till, history_error, history_rows,
-   history_truncated. #}
+{% comment %}
+Zdieľaná karta „História problémov" — používaná v host_tab.html (Device/VM tab)
+aj v zabbixhost.html (detail Zabbix hosta). Očakáva v kontexte: history_ranges,
+history_custom_from, history_custom_till, history_error, history_rows,
+history_truncated.
+{% endcomment %}
 <div class="card">
   <h2 class="card-header">História problémov</h2>
   <div class="card-body">
@@ -39,6 +41,7 @@
           <th>Od</th>
           <th>Do</th>
           <th>Ack</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -63,10 +66,17 @@
                 <i class="mdi mdi-circle-outline text-muted" title="Neacknowledgnuté"></i>
               {% endif %}
             </td>
+            <td>
+              {% if row.zabbix_url %}
+                <a href="{{ row.zabbix_url }}" target="_blank" title="Otvoriť problém v Zabbixe">
+                  <i class="mdi mdi-open-in-new"></i>
+                </a>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="5" class="text-muted">Žiadne problémy v tomto období</td>
+            <td colspan="6" class="text-muted">Žiadne problémy v tomto období</td>
           </tr>
         {% endfor %}
       </tbody>
