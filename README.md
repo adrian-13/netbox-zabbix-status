@@ -263,7 +263,24 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   a formulár uloží sám — nič sa nezapisuje automaticky, rovnaká „human
   confirms" filozofia ako pri ručnom párovaní. Keď má používateľ oprávnenie
   na oba typy, formuláre „Zariadenie"/„VM" sa zobrazujú v taboch (nie pod
-  sebou), aby dva dlhé formuláre nebolo treba prescrollovať.
+  sebou), aby dva dlhé formuláre nebolo treba prescrollovať. Súhrn Zabbix
+  hosta (atribúty + interfejsy) je nad formulármi ako kompaktný pás na celú
+  šírku, nie vo vedľajšom stĺpci — ten pri dlhom formulári zanechával veľkú
+  prázdnu plochu. Polia formulára Zariadenie sú zoskupené do rovnakých
+  sekcií ako natívna NetBox stránka Add Device (Hardvér, Umiestnenie, Správa,
+  Virtualizácia, Nájomník, Virtuálne šasi, Vlastník, ...) — `DeviceForm` totiž
+  na rozdiel od `VirtualMachineForm` nemá vlastné `fieldsets`, natívna stránka
+  si skupiny skladá ručne v šablóne, takže bez tejto úpravy sa všetky polia
+  zobrazovali ako jeden plochý zoznam. Formulár má aj rovnakú šírku ako
+  natívne Add Device/Add VM stránky (trieda `object-edit`, max. 800px), nie
+  na celú šírku stránky. Pole Latitude/Longitude v zariadení sa predvyplní
+  GPS súradnicami z Zabbix host inventory (`location_lat`/`location_lon`),
+  ak ich host má vyplnené — číta sa priamo zo Zabbix API pri otvorení
+  stránky (nepretrváva sa v DB, rovnako ako história problémov), zaokrúhlené
+  na 6 desatinných miest podľa limitu `Device.latitude`/`longitude`. Ikona
+  „+" v zozname Hosty je teraz plnofarebné tlačidlo (`btn btn-primary`),
+  rovnaký vzor ako natívne Edit/Delete tlačidlá — automaticky teda použije
+  aj NetBoxovu vlastnú teal farbu (tmavý aj svetlý režim).
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
