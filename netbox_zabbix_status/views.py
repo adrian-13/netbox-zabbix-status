@@ -3,12 +3,13 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Count, Max, Q
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import urlencode
 from django.views.generic import View
 
-from dcim.models import Device
+from dcim.models import Device, Site
 from netbox.views import generic
 from utilities.views import ViewTab, register_model_view
 from virtualization.models import VirtualMachine
@@ -524,3 +525,90 @@ class ZabbixHostEditView(generic.ObjectEditView):
     """Edit = len ručné priradenie hosta k zariadeniu/VM (match_method=manual)."""
     queryset = ZabbixHost.objects.all()
     form = ZabbixHostAssignForm
+
+
+#
+# Import nespárovaného hosta ako nové zariadenie/VM (M6)
+#
+
+IFACE_TYPE_LABELS = {'1': 'Agent', '2': 'SNMP', '3': 'IPMI', '4': 'JMX'}
+
+
+def _format_interface(iface):
+    """Rovnaké typové mapovanie a ip/dns-podľa-useip pravidlo, aké používajú
+    host_tab.html a zabbixhost.html — len ako jeden riadok textu pre comments."""
+    type_label = IFACE_TYPE_LABELS.get(iface.get('type'), iface.get('type') or '')
+    address = iface.get('ip') if iface.get('useip') == '1' else iface.get('dns')
+    return f"{type_label}: {address}:{iface.get('port', '')}"
+
+
+def _guess_site(host_groups):
+    """Odhad Site podľa mena Zabbix host group — vráti pk len ak presne jedna
+    Site zodpovedá (case-insensitive) naprieč všetkými group menami, inak None
+    (žiadny, ani nejednoznačný odhad; pole ostáva na ručné doplnenie)."""
+    matched_pks = set()
+    for group in host_groups:
+        if not group:
+            continue
+        matched_pks.update(Site.objects.filter(name__iexact=group).values_list('pk', flat=True))
+    if len(matched_pks) == 1:
+        return matched_pks.pop()
+    return None
+
+
+class ZabbixHostImportView(LoginRequiredMixin, View):
+    """Vstupný bod pre ručný import nespárovaného Zabbix hosta do NetBoxu.
+
+    Zabbix dáta samy o sebe nevedia spoľahlivo povedať, či ide o fyzické
+    zariadenie alebo virtuálny stroj, preto sa nič nezapisuje automaticky —
+    táto stránka len ukáže súhrn hosta a dva odkazy na stock Add Device /
+    Add VM formuláre NetBoxu, predvyplnené cez query string (meno, comments,
+    prípadne odhadnutá Site). Človek formulár dokončí a uloží sám, rovnaká
+    „human confirms" filozofia ako pri ručnom párovaní vyššie."""
+
+    def get(self, request, pk):
+        host = get_object_or_404(ZabbixHost, pk=pk)
+        if host.assigned_object:
+            messages.info(request, 'Tento host je už spárovaný.')
+            return redirect(host.get_absolute_url())
+
+        visible = host.visible_name or host.name
+        host_groups_str = ', '.join(g for g in host.host_groups if g) or '—'
+        templates_str = ', '.join(t for t in host.templates if t) or '—'
+        proxy_str = host.proxy_name or '—'
+        interfaces_str = ', '.join(_format_interface(i) for i in host.interfaces) or '—'
+        last_synced_str = host.last_synced if host.last_synced else '—'
+
+        comments = (
+            f'Importované zo Zabbix hosta "{visible}" (host ID {host.zabbix_hostid}).\n'
+            f'Host groups: {host_groups_str}\n'
+            f'Šablóny: {templates_str}\n'
+            f'Proxy: {proxy_str}\n'
+            f'Interfejsy: {interfaces_str}\n'
+            f'Posledný sync zo Zabbixu: {last_synced_str}\n\n'
+            'Po vytvorení nezabudni pridať interfejs a IP adresu podľa údajov vyššie '
+            'a priradiť tento záznam k Zabbix hostu (Zabbix -> Hosty -> edit -> '
+            'priradiť toto zariadenie).'
+        )
+
+        site_pk = _guess_site(host.host_groups)
+
+        device_params = {'name': visible, 'status': 'active', 'comments': comments}
+        if site_pk is not None:
+            device_params['site'] = site_pk
+        device_add_url = f"{reverse('dcim:device_add')}?{urlencode(device_params)}"
+
+        # VirtualMachine má v tejto verzii NetBoxu vlastný priamy FK 'site'
+        # (nezávislý od cluster/device) — rovnaká Site logika platí aj tu.
+        vm_params = {'name': visible, 'status': 'active', 'comments': comments}
+        if site_pk is not None:
+            vm_params['site'] = site_pk
+        vm_add_url = f"{reverse('virtualization:virtualmachine_add')}?{urlencode(vm_params)}"
+
+        return render(request, 'netbox_zabbix_status/host_import.html', {
+            'host': host,
+            'device_add_url': device_add_url,
+            'vm_add_url': vm_add_url,
+            'can_add_device': request.user.has_perm('dcim.add_device'),
+            'can_add_vm': request.user.has_perm('virtualization.add_virtualmachine'),
+        })

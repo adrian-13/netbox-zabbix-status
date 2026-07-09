@@ -14,6 +14,7 @@ urlpatterns = [
     path('settings/<int:pk>/', include(get_model_urls('netbox_zabbix_status', 'zabbixconfiguration'))),
     path('refresh/', views.ZabbixRefreshView.as_view(), name='refresh'),
     path('hosts/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost', detail=False))),
+    path('hosts/<int:pk>/import/', views.ZabbixHostImportView.as_view(), name='zabbixhost_import'),
     path('hosts/<int:pk>/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost'))),
     path('problems/', include(get_model_urls('netbox_zabbix_status', 'zabbixproblem', detail=False))),
 ]

@@ -12,7 +12,7 @@ _MATCHING_ENABLED = get_setting('matching_enabled', True)
 if _MATCHING_ENABLED:
     _HOST_DEFAULT_COLUMNS = (
         'name', 'device', 'virtual_machine', 'status', 'match_method',
-        'problem_count', 'max_severity', 'last_synced', 'zabbix_link',
+        'problem_count', 'max_severity', 'last_synced', 'zabbix_link', 'import_link',
     )
     # 'host' (meno zo Zabbixu) je v defaulte — device/VM/site sú prázdne
     # pri problémoch na nespárovaných hostoch a riadok by nemal identifikáciu
@@ -24,7 +24,7 @@ else:
     # Čistý Zabbix viewer — NetBox stĺpce sú default skryté (dajú sa zapnúť ručne)
     _HOST_DEFAULT_COLUMNS = (
         'name', 'visible_name', 'status', 'agent_available', 'snmp_available',
-        'problem_count', 'max_severity', 'last_synced', 'zabbix_link',
+        'problem_count', 'max_severity', 'last_synced', 'zabbix_link', 'import_link',
     )
     _PROBLEM_DEFAULT_COLUMNS = (
         'severity', 'name', 'host', 'acknowledged', 'started', 'opdata', 'zabbix_link',
@@ -52,6 +52,17 @@ ZABBIX_LINK = """
 {% endif %}
 """
 
+IMPORT_LINK = """
+{% if not record.assigned_object %}
+  {% if perms.dcim.add_device or perms.virtualization.add_virtualmachine %}
+    <a href="{% url 'plugins:netbox_zabbix_status:zabbixhost_import' pk=record.pk %}"
+       title="Importovať do NetBoxu ako zariadenie alebo VM">
+      <i class="mdi mdi-plus-circle-outline"></i>
+    </a>
+  {% endif %}
+{% endif %}
+"""
+
 
 class ZabbixHostTable(NetBoxTable):
     name = tables.Column(linkify=True, verbose_name='Meno')
@@ -73,6 +84,9 @@ class ZabbixHostTable(NetBoxTable):
     zabbix_link = tables.TemplateColumn(
         template_code=ZABBIX_LINK, verbose_name='', orderable=False
     )
+    import_link = tables.TemplateColumn(
+        template_code=IMPORT_LINK, verbose_name='', orderable=False
+    )
     # Edit = ručné priradenie k zariadeniu/VM; ostatné dáta sú synced (read-only)
     actions = columns.ActionsColumn(actions=('edit',))
 
@@ -83,7 +97,7 @@ class ZabbixHostTable(NetBoxTable):
             'virtual_machine', 'site', 'status', 'match_method',
             'agent_available', 'snmp_available', 'ipmi_available', 'jmx_available',
             'active_available', 'in_maintenance', 'proxy_name', 'problem_count',
-            'max_severity', 'last_synced', 'tags', 'zabbix_link',
+            'max_severity', 'last_synced', 'tags', 'zabbix_link', 'import_link',
         )
         default_columns = _HOST_DEFAULT_COLUMNS
 
