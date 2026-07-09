@@ -2,16 +2,19 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.db import transaction
 from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import urlencode
 from django.views.generic import View
 
+from dcim.forms import DeviceForm, InterfaceForm
 from dcim.models import Device, Site
+from ipam.forms import IPAddressForm
 from netbox.views import generic
 from utilities.views import ViewTab, register_model_view
+from virtualization.forms import VirtualMachineForm, VMInterfaceForm
 from virtualization.models import VirtualMachine
 
 from .choices import AvailabilityChoices, SeverityChoices
@@ -542,6 +545,16 @@ def _format_interface(iface):
     return f"{type_label}: {address}:{iface.get('port', '')}"
 
 
+def _best_interface_ip(interfaces):
+    """Prvý Zabbix interfejs s reálnou IP adresou (useip='1' a neprázdna ip) —
+    kandidát na loopback IP pri importe. None, ak žiadny taký nie je (vtedy sa
+    pri importe nevytvára rozhranie/IP, len samotné zariadenie/VM)."""
+    for iface in interfaces:
+        if iface.get('useip') == '1' and iface.get('ip'):
+            return iface['ip']
+    return None
+
+
 def _guess_site(host_groups):
     """Odhad Site podľa mena Zabbix host group — vráti pk len ak presne jedna
     Site zodpovedá (case-insensitive) naprieč všetkými group menami, inak None
@@ -561,54 +574,169 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
 
     Zabbix dáta samy o sebe nevedia spoľahlivo povedať, či ide o fyzické
     zariadenie alebo virtuálny stroj, preto sa nič nezapisuje automaticky —
-    táto stránka len ukáže súhrn hosta a dva odkazy na stock Add Device /
-    Add VM formuláre NetBoxu, predvyplnené cez query string (meno, comments,
-    prípadne odhadnutá Site). Človek formulár dokončí a uloží sám, rovnaká
-    „human confirms" filozofia ako pri ručnom párovaní vyššie."""
+    stránka ukáže dva kombinované formuláre (Zariadenie+Loopback rozhranie+IP,
+    VM+VM rozhranie+IP), každý predvyplnený z Zabbix dát (meno, comments,
+    prípadne odhadnutá Site, IP zo SNMP interfejsu). Človek vyberie jeden,
+    doplní povinné polia (device_type/rola…) a uloží — všetky tri objekty sa
+    vytvoria v jednej transakcii. Rozhranie+IP sa vytvoria len ak má polička
+    IP adresy pri odoslaní neprázdnu hodnotu (dá sa jednoducho vynechať
+    vymazaním poľa). Rovnaká „human confirms" filozofia ako pri ručnom
+    párovaní — nič sa nezapisuje bez výslovného kliknutia na Uložiť."""
 
     def get(self, request, pk):
         host = get_object_or_404(ZabbixHost, pk=pk)
         if host.assigned_object:
             messages.info(request, 'Tento host je už spárovaný.')
             return redirect(host.get_absolute_url())
+        return render(request, 'netbox_zabbix_status/host_import.html', self._context(request, host))
 
+    def post(self, request, pk):
+        host = get_object_or_404(ZabbixHost, pk=pk)
+        if host.assigned_object:
+            messages.info(request, 'Tento host je už spárovaný.')
+            return redirect(host.get_absolute_url())
+
+        kind = request.POST.get('kind')
+        if kind == 'device' and not request.user.has_perm('dcim.add_device'):
+            kind = None
+        if kind == 'vm' and not request.user.has_perm('virtualization.add_virtualmachine'):
+            kind = None
+        if kind not in ('device', 'vm'):
+            messages.error(request, 'Neplatná alebo neoprávnená požiadavka.')
+            return redirect(request.path)
+
+        save = self._save_device if kind == 'device' else self._save_vm
+        ok, obj, iface, ip_obj, forms = save(request)
+
+        if not ok:
+            context = self._context(request, host)
+            context.update(forms)
+            return render(request, 'netbox_zabbix_status/host_import.html', context)
+
+        if iface:
+            messages.success(
+                request,
+                f'Vytvorené: „{obj}", rozhranie „{iface}"'
+                + (f', IP „{ip_obj}"' if ip_obj else '') + '.'
+            )
+        else:
+            messages.success(request, f'Vytvorené: „{obj}".')
+        return redirect(obj.get_absolute_url())
+
+    # -- zdieľané pomocné metódy --------------------------------------------
+
+    @staticmethod
+    def _build_comments(host):
         visible = host.visible_name or host.name
         host_groups_str = ', '.join(g for g in host.host_groups if g) or '—'
         templates_str = ', '.join(t for t in host.templates if t) or '—'
         proxy_str = host.proxy_name or '—'
         interfaces_str = ', '.join(_format_interface(i) for i in host.interfaces) or '—'
         last_synced_str = host.last_synced if host.last_synced else '—'
-
-        comments = (
+        return (
             f'Importované zo Zabbix hosta "{visible}" (host ID {host.zabbix_hostid}).\n'
             f'Host groups: {host_groups_str}\n'
             f'Šablóny: {templates_str}\n'
             f'Proxy: {proxy_str}\n'
             f'Interfejsy: {interfaces_str}\n'
-            f'Posledný sync zo Zabbixu: {last_synced_str}\n\n'
-            'Po vytvorení nezabudni pridať interfejs a IP adresu podľa údajov vyššie '
-            'a priradiť tento záznam k Zabbix hostu (Zabbix -> Hosty -> edit -> '
-            'priradiť toto zariadenie).'
+            f'Posledný sync zo Zabbixu: {last_synced_str}'
         )
 
+    def _context(self, request, host):
+        """Nezáväzné (GET) formuláre pre oba typy, predvyplnené zo Zabbix dát —
+        použité aj na znovu-vykreslenie po neúspešnej validácii (vtedy sa
+        prepíšu tie za _save_device/_save_vm vo `forms` dicte)."""
+        comments = self._build_comments(host)
         site_pk = _guess_site(host.host_groups)
-
-        device_params = {'name': visible, 'status': 'active', 'comments': comments}
+        ip = _best_interface_ip(host.interfaces)
+        visible = host.visible_name or host.name
+        common = {'name': visible, 'comments': comments, 'status': 'active'}
         if site_pk is not None:
-            device_params['site'] = site_pk
-        device_add_url = f"{reverse('dcim:device_add')}?{urlencode(device_params)}"
+            common['site'] = site_pk
+        ip_initial = {'address': f'{ip}/32', 'status': 'active', 'primary_for_parent': True} if ip else {}
 
-        # VirtualMachine má v tejto verzii NetBoxu vlastný priamy FK 'site'
-        # (nezávislý od cluster/device) — rovnaká Site logika platí aj tu.
-        vm_params = {'name': visible, 'status': 'active', 'comments': comments}
-        if site_pk is not None:
-            vm_params['site'] = site_pk
-        vm_add_url = f"{reverse('virtualization:virtualmachine_add')}?{urlencode(vm_params)}"
-
-        return render(request, 'netbox_zabbix_status/host_import.html', {
+        return {
             'host': host,
-            'device_add_url': device_add_url,
-            'vm_add_url': vm_add_url,
+            'has_ip': bool(ip),
             'can_add_device': request.user.has_perm('dcim.add_device'),
             'can_add_vm': request.user.has_perm('virtualization.add_virtualmachine'),
-        })
+            'device_form': DeviceForm(initial=common, prefix='device'),
+            'iface_form': InterfaceForm(
+                initial={'name': 'Loopback0', 'type': 'virtual', 'enabled': True}, prefix='iface'
+            ),
+            'ip_form': IPAddressForm(initial=ip_initial, prefix='ip'),
+            'vm_form': VirtualMachineForm(initial=common, prefix='vm'),
+            'vmiface_form': VMInterfaceForm(initial={'name': 'Loopback0', 'enabled': True}, prefix='vmiface'),
+            'vmip_form': IPAddressForm(initial=ip_initial, prefix='vmip'),
+        }
+
+    def _save_device(self, request):
+        """Vytvorí Device, a ak formulár IP adresy obsahuje neprázdnu hodnotu,
+        aj Interface (type=virtual) + IPAddress (assigned_object=ten interface,
+        primary_for_parent podľa checkboxu) — všetko v jednej transakcii.
+        Vracia (ok, device_alebo_None, iface_alebo_None, ip_alebo_None,
+        {kontextove_kluce_s_bound_formularmi_na_znovu-vykreslenie})."""
+        with transaction.atomic():
+            device_form = DeviceForm(data=request.POST, prefix='device')
+            if not device_form.is_valid():
+                transaction.set_rollback(True)
+                return False, None, None, None, {'device_form': device_form}
+            device = device_form.save()
+
+            ip_value = request.POST.get('ip-address', '').strip()
+            if not ip_value:
+                return True, device, None, None, {}
+
+            iface_data = request.POST.copy()
+            iface_data['iface-device'] = device.pk
+            iface_form = InterfaceForm(data=iface_data, prefix='iface')
+            if not iface_form.is_valid():
+                transaction.set_rollback(True)
+                return False, None, None, None, {'device_form': device_form, 'iface_form': iface_form}
+            iface = iface_form.save()
+
+            ip_data = request.POST.copy()
+            ip_data['ip-interface'] = iface.pk
+            ip_form = IPAddressForm(data=ip_data, prefix='ip')
+            if not ip_form.is_valid():
+                transaction.set_rollback(True)
+                return False, None, None, None, {
+                    'device_form': device_form, 'iface_form': iface_form, 'ip_form': ip_form,
+                }
+            ip_obj = ip_form.save()
+
+            return True, device, iface, ip_obj, {}
+
+    def _save_vm(self, request):
+        """Rovnaké ako _save_device, len pre VirtualMachine/VMInterface —
+        VMInterfaceForm nemá pole 'type' (VM rozhrania ho v NetBoxe nemajú)."""
+        with transaction.atomic():
+            vm_form = VirtualMachineForm(data=request.POST, prefix='vm')
+            if not vm_form.is_valid():
+                transaction.set_rollback(True)
+                return False, None, None, None, {'vm_form': vm_form}
+            vm = vm_form.save()
+
+            ip_value = request.POST.get('vmip-address', '').strip()
+            if not ip_value:
+                return True, vm, None, None, {}
+
+            iface_data = request.POST.copy()
+            iface_data['vmiface-virtual_machine'] = vm.pk
+            vmiface_form = VMInterfaceForm(data=iface_data, prefix='vmiface')
+            if not vmiface_form.is_valid():
+                transaction.set_rollback(True)
+                return False, None, None, None, {'vm_form': vm_form, 'vmiface_form': vmiface_form}
+            vmiface = vmiface_form.save()
+
+            ip_data = request.POST.copy()
+            ip_data['vmip-vminterface'] = vmiface.pk
+            vmip_form = IPAddressForm(data=ip_data, prefix='vmip')
+            if not vmip_form.is_valid():
+                transaction.set_rollback(True)
+                return False, None, None, None, {
+                    'vm_form': vm_form, 'vmiface_form': vmiface_form, 'vmip_form': vmip_form,
+                }
+            ip_obj = vmip_form.save()
+
+            return True, vm, vmiface, ip_obj, {}

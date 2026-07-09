@@ -1,11 +1,12 @@
 {% extends 'generic/_base.html' %}
 {% load helpers %}
+{% load form_helpers %}
 
 {% block title %}Importovať {{ host }}{% endblock %}
 
 {% block content %}
   <div class="row mb-3">
-    <div class="col col-12 col-xl-6">
+    <div class="col col-12 col-xl-4">
       <div class="card">
         <h2 class="card-header">Zabbix host</h2>
         <table class="table table-hover attr-table">
@@ -55,44 +56,100 @@
             {% endfor %}
           </tbody>
         </table>
-      </div>
-    </div>
-    <div class="col col-12 col-xl-6">
-      <div class="card">
-        <h2 class="card-header">Import do NetBoxu</h2>
-        <div class="card-body">
-          <p class="text-muted">
-            Zabbix nevie spoľahlivo určiť, či ide o fyzické zariadenie alebo
-            virtuálny stroj — vyber správny typ nižšie. Meno a poznámka
-            (comments) budú predvyplnené s údajmi zo Zabbixu; typ zariadenia,
-            rolu a ďalšie povinné polia je potrebné doplniť ručne pred
-            uložením.
-          </p>
-          {% if can_add_device or can_add_vm %}
-            <div class="btn-list">
-              {% if can_add_device %}
-                <a href="{{ device_add_url }}" class="btn btn-primary">
-                  <i class="mdi mdi-plus"></i> Vytvoriť ako zariadenie
-                </a>
-              {% endif %}
-              {% if can_add_vm %}
-                <a href="{{ vm_add_url }}" class="btn btn-primary">
-                  <i class="mdi mdi-plus"></i> Vytvoriť ako virtuálny stroj
-                </a>
-              {% endif %}
-            </div>
-          {% else %}
-            <div class="text-muted">
-              Nemáš oprávnenie na vytvorenie zariadenia ani virtuálneho stroja.
-            </div>
-          {% endif %}
-        </div>
+        {% if not has_ip %}
+          <div class="card-body text-muted small">
+            <i class="mdi mdi-information-outline"></i>
+            Žiadny interfejs nemá priamu IP adresu — nižšie sa vytvorí len
+            samotné zariadenie/VM, bez loopback rozhrania.
+          </div>
+        {% endif %}
       </div>
       <div class="mt-2">
         <a href="{% url 'plugins:netbox_zabbix_status:zabbixhost_list' %}">
           <i class="mdi mdi-arrow-left"></i> Späť na zoznam Hosty
         </a>
       </div>
+    </div>
+
+    <div class="col col-12 col-xl-8">
+      {% if not can_add_device and not can_add_vm %}
+        <div class="alert alert-warning">
+          Nemáš oprávnenie na vytvorenie zariadenia ani virtuálneho stroja.
+        </div>
+      {% endif %}
+
+      {% if can_add_device %}
+        <div class="card">
+          <h2 class="card-header">Vytvoriť ako zariadenie</h2>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="device">
+            <div class="card-body">
+              {% include 'htmx/form.html' with form=device_form %}
+            </div>
+            {% if has_ip %}
+              <h2 class="card-header">Loopback rozhranie</h2>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col col-md-6">{% render_field iface_form.name %}</div>
+                  <div class="col col-md-6">{% render_field iface_form.type %}</div>
+                </div>
+                {% render_field iface_form.enabled %}
+              </div>
+              <h2 class="card-header">IP adresa</h2>
+              <div class="card-body">
+                {% render_field ip_form.address %}
+                {% render_field ip_form.status %}
+                {% render_field ip_form.primary_for_parent %}
+                <div class="form-text">
+                  Vymaž adresu vyššie, ak nechceš vytvárať loopback rozhranie
+                  ani IP — vznikne len samotné zariadenie.
+                </div>
+              </div>
+            {% endif %}
+            <div class="card-body">
+              <button type="submit" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i> Vytvoriť zariadenie{% if has_ip %} + rozhranie + IP{% endif %}
+              </button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+
+      {% if can_add_vm %}
+        <div class="card">
+          <h2 class="card-header">Vytvoriť ako virtuálny stroj</h2>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="vm">
+            <div class="card-body">
+              {% include 'htmx/form.html' with form=vm_form %}
+            </div>
+            {% if has_ip %}
+              <h2 class="card-header">Loopback rozhranie</h2>
+              <div class="card-body">
+                {% render_field vmiface_form.name %}
+                {% render_field vmiface_form.enabled %}
+              </div>
+              <h2 class="card-header">IP adresa</h2>
+              <div class="card-body">
+                {% render_field vmip_form.address %}
+                {% render_field vmip_form.status %}
+                {% render_field vmip_form.primary_for_parent %}
+                <div class="form-text">
+                  Vymaž adresu vyššie, ak nechceš vytvárať loopback rozhranie
+                  ani IP — vznikne len samotný virtuálny stroj.
+                </div>
+              </div>
+            {% endif %}
+            <div class="card-body">
+              <button type="submit" class="btn btn-primary">
+                <i class="mdi mdi-plus"></i> Vytvoriť VM{% if has_ip %} + rozhranie + IP{% endif %}
+              </button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
     </div>
   </div>
 {% endblock %}
