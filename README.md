@@ -95,7 +95,7 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí.
 
 ## Changelog
 
-### Unreleased
+### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
   Nepokryté VM / Nespárované hosty) aj jej pohľady; nespárovaných hostov nájdeš
   filtrom `is_matched=false` priamo v zozname Hosty (má aj akciu úpravy priradenia).
