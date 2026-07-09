@@ -214,6 +214,15 @@ class ZabbixHost(NetBoxModel):
     def get_absolute_url(self):
         return reverse('plugins:netbox_zabbix_status:zabbixhost', args=[self.pk])
 
+    def get_zabbix_url(self):
+        """Priamy odkaz na dashboard tohto hosta v Zabbixe (rovnaký cieľ ako
+        tlačidlo „Dashboard" na detaile hosta a v paneli na Device/VM stránke)."""
+        from .zabbix import get_web_url
+        web_url = get_web_url()
+        if not web_url:
+            return None
+        return f'{web_url}/zabbix.php?action=host.dashboard.view&hostid={self.zabbix_hostid}'
+
     @property
     def assigned_object(self):
         return self.device or self.virtual_machine
