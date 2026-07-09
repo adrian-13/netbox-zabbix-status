@@ -16,9 +16,17 @@
           <h2 class="card-header">Párovanie s NetBoxom</h2>
           <div class="card-body">
             {% render_field form.matching_enabled %}
-            {% render_field form.match_by_ip %}
-            {% render_field form.sync_vms %}
-            {% render_field form.strip_domains %}
+            {% if 'match_by_ip' in form.fields %}
+              {% render_field form.match_by_ip %}
+              {% render_field form.sync_vms %}
+              {% render_field form.strip_domains %}
+            {% else %}
+              <div class="form-text">
+                <i class="mdi mdi-information-outline"></i>
+                Ostatné voľby párovania sa objavia po zapnutí a uložení vyššie —
+                v „čistom Zabbix viewer" režime nemajú žiadny efekt.
+              </div>
+            {% endif %}
           </div>
         </div>
 
@@ -44,12 +52,18 @@
         <div class="card">
           <h2 class="card-header">Dashboard</h2>
           <div class="card-body">
-            {% render_field form.dashboard_matched_only %}
+            {% if 'dashboard_matched_only' in form.fields %}
+              {% render_field form.dashboard_matched_only %}
+            {% endif %}
             {% render_field form.dashboard_refresh %}
             <div class="form-text">
               Výber zobrazovaných severít sa nastavuje priamo na
               <a href="{% url 'plugins:netbox_zabbix_status:dashboard' %}">dashboarde</a>
               (ikona ozubeného kolieska).
+              {% if 'dashboard_matched_only' not in form.fields %}
+                V „čistom Zabbix viewer" režime (párovanie vypnuté) dashboard
+                vždy zobrazuje všetky hosty zo Zabbixu.
+              {% endif %}
             </div>
           </div>
         </div>

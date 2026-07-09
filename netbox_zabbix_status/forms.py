@@ -44,12 +44,21 @@ class ZabbixSettingsForm(forms.ModelForm):
             self.fields['strip_domains'].initial = ', '.join(
                 self.instance.hostname_strip_domains
             )
+            # Tieto polia majú efekt len keď je párovanie zapnuté — v „čistom
+            # Zabbix viewer" režime ich formulár vôbec neponúka. Mazanie zo
+            # self.fields (nie len skrytie v šablóne) je zámerné: chýbajúce
+            # pole sa nedostane do cleaned_data, takže ho save()/construct_instance
+            # nechá na pokoji namiesto toho, aby ho ticho vynuloval.
+            if not self.instance.matching_enabled:
+                for name in ('match_by_ip', 'sync_vms', 'strip_domains', 'dashboard_matched_only'):
+                    del self.fields[name]
 
     def save(self, *args, **kwargs):
-        raw = self.cleaned_data.get('strip_domains', '')
-        self.instance.hostname_strip_domains = [
-            d.strip().strip('.') for d in raw.split(',') if d.strip()
-        ]
+        if 'strip_domains' in self.fields:
+            raw = self.cleaned_data.get('strip_domains', '')
+            self.instance.hostname_strip_domains = [
+                d.strip().strip('.') for d in raw.split(',') if d.strip()
+            ]
         return super().save(*args, **kwargs)
 
 

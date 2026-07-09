@@ -89,6 +89,10 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí.
 - Výber severít na dashboarde sa už edituje len na jednom mieste (gear dropdown
   na dashboarde) — odstránený z formulára Nastavení, kde predtým hrozilo tiché
   prepísanie výberu pri uložení iného nastavenia.
+- **Nastavenia reagujú na „čistý Zabbix viewer" režim** — keď je `matching_enabled`
+  vypnuté, formulár skryje `match_by_ip`/`sync_vms`/odrezávané domény aj
+  „Dashboard len spárované hosty" (nemajú v tomto režime žiadny efekt) a vysvetlí
+  prečo; ich uložené hodnoty zostávajú v DB nedotknuté, kým sa párovanie znova nezapne.
 
 ### v0.2.0
 - **Sync a párovanie** — background job (`sync_interval` minút) ťahá hostov a problémy
