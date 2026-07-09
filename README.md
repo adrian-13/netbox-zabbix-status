@@ -23,10 +23,6 @@ Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
 > **Dôležité:** RQ worker musí bežať — periodický sync („Zabbix sync" system job)
 > aj tlačidlo „Obnoviť zo Zabbixu" bez neho nikdy neprebehnú.
 
-Tento repozitár je **privátny** — inštalácia cez `pip install git+https://...`
-alebo `git clone` vyžaduje, aby mal inštalujúci stroj/účet prístup na GitHub
-(SSH kľúč alebo token pre účet vlastniaci repo).
-
 ## Inštalácia
 
 ### Do netbox-docker (spôsob použitý v tomto nasadení)
