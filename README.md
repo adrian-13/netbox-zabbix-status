@@ -250,14 +250,18 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   dashboard hosta priamo v Zabbixe (`ZabbixHost.get_zabbix_url()`).
 - **Import nespárovaného hosta ako nové zariadenie/VM** — nová ikona pri
   nespárovaných hostoch v zozname Hosty (viditeľná len bez existujúcej väzby
-  a s oprávnením na pridanie Device alebo VM) vedie na stránku so súhrnom
-  Zabbix hosta a dvomi tlačidlami „Vytvoriť ako zariadenie" / „Vytvoriť ako
-  virtuálny stroj". Oba odkazujú na stock NetBox formuláre Add Device / Add
-  VM, predvyplnené cez query string (meno, comments so súhrnom zo Zabbixu
-  vrátane interfejsov, prípadne odhadnutá Site podľa zhody host group ↔ meno
-  Site). Nič sa nezapisuje automaticky — typ zariadenia/rolu (a ostatné
-  povinné polia) človek doplní a formulár uloží sám, rovnaká „human confirms"
-  filozofia ako pri ručnom párovaní.
+  a s oprávnením na pridanie Device alebo VM) vedie na stránku s dvomi
+  kombinovanými formulármi „Vytvoriť ako zariadenie" / „Vytvoriť ako
+  virtuálny stroj" — každý postavený zo stock NetBox formulárov (DeviceForm/
+  VirtualMachineForm + InterfaceForm/VMInterfaceForm + IPAddressForm),
+  predvyplnené menom, comments so súhrnom zo Zabbixu a prípadne odhadnutou
+  Site. Jedno kliknutie na Uložiť vytvorí v jednej transakcii zariadenie/VM
+  **aj** loopback rozhranie (`type=virtual`) so SNMP IP adresou zo Zabbixu,
+  nastavenou rovno ako primárna IP (`IPAddressForm.primary_for_parent`) —
+  vymazanie IP adresy pred odoslaním vytvorí len samotné zariadenie/VM bez
+  rozhrania. Typ zariadenia/rolu (a ostatné povinné polia) človek doplní
+  a formulár uloží sám — nič sa nezapisuje automaticky, rovnaká „human
+  confirms" filozofia ako pri ručnom párovaní.
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
