@@ -244,6 +244,8 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   ten problém priamo v Zabbixe (`tr_events.php`, rovnaký formát ako makro
   `{EVENT.URL}`). Vyžaduje `zabbix_triggerid` na `ZabbixProblem` (migrácia 0007,
   doplní sa pri najbližšom synce).
+- **Priamy odkaz na hosta v Zabbixe aj v zozname Hosty** — rovnaká ikona otvorí
+  dashboard hosta priamo v Zabbixe (`ZabbixHost.get_zabbix_url()`).
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
