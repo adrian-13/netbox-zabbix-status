@@ -4,26 +4,34 @@ Formulár „Vytvoriť ako VM" na stránke importu Zabbix hosta (host_import.htm
 — vytiahnuté do partialu, aby ho bolo možné zobraziť buď v tabe (keď má
 používateľ oprávnenie na oba typy) alebo samostatne.
 Očakáva v kontexte: vm_form, vmiface_form, vmip_form, has_ip.
+Trieda „object-edit" na <form> je tá istá, čo NetBox používa na
+generic/object_edit.html (_forms.scss: max-width 800px, margin: auto) —
+zaisťuje rovnakú šírku formulára ako natívna stránka Add Virtual Machine.
 {% endcomment %}
-<div class="card">
-  <h2 class="card-header">VM</h2>
-  <form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="kind" value="vm">
+<form method="post" class="object-edit">
+  {% csrf_token %}
+  <input type="hidden" name="kind" value="vm">
+  <div class="card">
+    <h2 class="card-header">VM</h2>
     <div class="card-body">
       {% include 'htmx/form.html' with form=vm_form %}
     </div>
     {% if has_ip %}
-      <h2 class="card-header">Loopback rozhranie</h2>
+      <h2 class="card-header">Sieťové pripojenie</h2>
       <div class="card-body">
-        {% render_field vmiface_form.name %}
-        {% render_field vmiface_form.enabled %}
-      </div>
-      <h2 class="card-header">IP adresa</h2>
-      <div class="card-body">
-        {% render_field vmip_form.address %}
-        {% render_field vmip_form.status %}
-        {% render_field vmip_form.primary_for_parent %}
+        <div class="row">
+          <div class="col col-12 col-lg-6">
+            <h5 class="text-muted">Loopback rozhranie</h5>
+            {% render_field vmiface_form.name %}
+            {% render_field vmiface_form.enabled %}
+          </div>
+          <div class="col col-12 col-lg-6">
+            <h5 class="text-muted">IP adresa</h5>
+            {% render_field vmip_form.address %}
+            {% render_field vmip_form.status %}
+            {% render_field vmip_form.primary_for_parent %}
+          </div>
+        </div>
         <div class="form-text">
           Vymaž adresu vyššie, ak nechceš vytvárať loopback rozhranie
           ani IP — vznikne len samotné VM.
@@ -35,5 +43,5 @@ Očakáva v kontexte: vm_form, vmiface_form, vmip_form, has_ip.
         <i class="mdi mdi-plus"></i> Vytvoriť VM{% if has_ip %} + rozhranie + IP{% endif %}
       </button>
     </div>
-  </form>
-</div>
+  </div>
+</form>

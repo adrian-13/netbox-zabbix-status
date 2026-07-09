@@ -84,6 +84,28 @@ def get_live_problems(hostid: int) -> list:
     return problems
 
 
+def get_host_inventory(hostid: int) -> dict:
+    """GPS súradnice hosta z jeho Zabbix inventory, priamo z API — podobne ako
+    história problémov sa nikde neukladá (treba len raz, pri predvyplnení
+    importného formulára). Prázdny dict, ak host nemá inventory zapnuté alebo
+    súradnice nevyplnené."""
+    cache_key = f'{PLUGIN_NAME}:inventory:{hostid}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    api = get_client()
+    hosts = api.host.get(
+        hostids=[hostid],
+        output=[],
+        selectInventory=['location_lat', 'location_lon'],
+    )
+    # Zabbix vráti 'inventory': [] (nie {}) keď má host vypnuté inventory
+    inventory = (hosts[0].get('inventory') or {}) if hosts else {}
+    cache.set(cache_key, inventory, int(get_setting('cache_ttl', 30)))
+    return inventory
+
+
 def get_problem_history(hostid: int, time_from: int, time_till: int) -> list:
     """História problémov hosta (aj vyriešených) vzniknutých v danom časovom
     okne, priamo zo Zabbix API — na rozdiel od aktívnych problémov sa nikde

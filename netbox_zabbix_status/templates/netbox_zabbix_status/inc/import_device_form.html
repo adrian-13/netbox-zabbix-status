@@ -4,29 +4,136 @@ Formulár „Vytvoriť ako zariadenie" na stránke importu Zabbix hosta
 (host_import.html) — vytiahnuté do partialu, aby ho bolo možné zobraziť
 buď v tabe (keď má používateľ oprávnenie na oba typy) alebo samostatne.
 Očakáva v kontexte: device_form, iface_form, ip_form, has_ip.
+Polia device_form sú zoskupené ručne (rovnako ako NetBoxov natívny
+dcim/device_edit.html) — DeviceForm.fieldsets je prázdne, natívna
+stránka si skupiny renderuje priamo v šablóne, takže bez tohto by sa
+všetky polia zobrazili ako jeden plochý zoznam.
+Trieda „object-edit" na <form> je tá istá, čo NetBox používa na
+generic/object_edit.html (_forms.scss: max-width 800px, margin: auto) —
+zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 {% endcomment %}
-<div class="card">
-  <h2 class="card-header">Zariadenie</h2>
-  <form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="kind" value="device">
+<form method="post" class="object-edit">
+  {% csrf_token %}
+  <input type="hidden" name="kind" value="device">
+  <div class="card">
+    <h2 class="card-header">Zariadenie</h2>
     <div class="card-body">
-      {% include 'htmx/form.html' with form=device_form %}
+      {% for field in device_form.hidden_fields %}{{ field }}{% endfor %}
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Základné údaje</h5>
+        </div>
+        {% render_field device_form.name %}
+        {% render_field device_form.role %}
+        {% render_field device_form.description %}
+        {% render_field device_form.tags %}
+      </div>
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Hardvér</h5>
+        </div>
+        {% render_field device_form.device_type %}
+        {% render_field device_form.airflow %}
+        {% render_field device_form.serial %}
+        {% render_field device_form.asset_tag %}
+      </div>
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Umiestnenie</h5>
+        </div>
+        {% render_field device_form.site %}
+        {% render_field device_form.location %}
+        {% render_field device_form.rack %}
+        {% render_field device_form.face %}
+        {% render_field device_form.position %}
+        {% render_field device_form.latitude %}
+        {% render_field device_form.longitude %}
+      </div>
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Správa</h5>
+        </div>
+        {% render_field device_form.status %}
+        {% render_field device_form.platform %}
+        {% render_field device_form.config_template %}
+      </div>
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Virtualizácia</h5>
+        </div>
+        {% render_field device_form.cluster %}
+      </div>
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Nájomník</h5>
+        </div>
+        {% render_field device_form.tenant_group %}
+        {% render_field device_form.tenant %}
+      </div>
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Virtuálne šasi</h5>
+        </div>
+        {% render_field device_form.virtual_chassis %}
+        {% render_field device_form.vc_position %}
+        {% render_field device_form.vc_priority %}
+      </div>
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Vlastník</h5>
+        </div>
+        {% render_field device_form.owner_group %}
+        {% render_field device_form.owner %}
+      </div>
+
+      {% if device_form.custom_fields %}
+        <div class="field-group mb-4">
+          <div class="row">
+            <h5 class="col-9 offset-3 text-muted">Vlastné polia</h5>
+          </div>
+          {% render_custom_fields device_form %}
+        </div>
+      {% endif %}
+
+      <div class="field-group mb-4">
+        <div class="row">
+          <h5 class="col-9 offset-3 text-muted">Lokálny kontext</h5>
+        </div>
+        {% render_field device_form.local_context_data %}
+      </div>
+
+      <div class="field-group mb-0">
+        {% render_field device_form.comments %}
+        {% render_field device_form.changelog_message %}
+      </div>
     </div>
     {% if has_ip %}
-      <h2 class="card-header">Loopback rozhranie</h2>
+      <h2 class="card-header">Sieťové pripojenie</h2>
       <div class="card-body">
         <div class="row">
-          <div class="col col-md-6">{% render_field iface_form.name %}</div>
-          <div class="col col-md-6">{% render_field iface_form.type %}</div>
+          <div class="col col-12 col-lg-6">
+            <h5 class="text-muted">Loopback rozhranie</h5>
+            <div class="row">
+              <div class="col col-md-6">{% render_field iface_form.name %}</div>
+              <div class="col col-md-6">{% render_field iface_form.type %}</div>
+            </div>
+            {% render_field iface_form.enabled %}
+          </div>
+          <div class="col col-12 col-lg-6">
+            <h5 class="text-muted">IP adresa</h5>
+            {% render_field ip_form.address %}
+            {% render_field ip_form.status %}
+            {% render_field ip_form.primary_for_parent %}
+          </div>
         </div>
-        {% render_field iface_form.enabled %}
-      </div>
-      <h2 class="card-header">IP adresa</h2>
-      <div class="card-body">
-        {% render_field ip_form.address %}
-        {% render_field ip_form.status %}
-        {% render_field ip_form.primary_for_parent %}
         <div class="form-text">
           Vymaž adresu vyššie, ak nechceš vytvárať loopback rozhranie
           ani IP — vznikne len samotné zariadenie.
@@ -38,5 +145,5 @@ Očakáva v kontexte: device_form, iface_form, ip_form, has_ip.
         <i class="mdi mdi-plus"></i> Vytvoriť zariadenie{% if has_ip %} + rozhranie + IP{% endif %}
       </button>
     </div>
-  </form>
-</div>
+  </div>
+</form>

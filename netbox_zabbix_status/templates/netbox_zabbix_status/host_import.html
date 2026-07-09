@@ -5,11 +5,17 @@
 {% block title %}Importovať {{ host }}{% endblock %}
 
 {% block content %}
+  <div class="mb-3">
+    <a href="{% url 'plugins:netbox_zabbix_status:zabbixhost_list' %}">
+      <i class="mdi mdi-arrow-left"></i> Späť na zoznam Hosty
+    </a>
+  </div>
+
   <div class="row mb-3">
-    <div class="col col-12 col-xl-4">
-      <div class="card">
+    <div class="col col-12 col-md-6">
+      <div class="card h-100">
         <h2 class="card-header">Zabbix host</h2>
-        <table class="table table-hover attr-table">
+        <table class="table table-hover attr-table mb-0">
           <tr>
             <th scope="row">Meno</th>
             <td>{{ host.visible_name|default:host.name }}</td>
@@ -36,9 +42,12 @@
           </tr>
         </table>
       </div>
-      <div class="card">
+    </div>
+
+    <div class="col col-12 col-md-6">
+      <div class="card h-100">
         <h2 class="card-header">Interfejsy</h2>
-        <table class="table table-hover">
+        <table class="table table-hover mb-0">
           <thead>
             <tr><th>Typ</th><th>Adresa</th><th>Port</th></tr>
           </thead>
@@ -64,14 +73,11 @@
           </div>
         {% endif %}
       </div>
-      <div class="mt-2">
-        <a href="{% url 'plugins:netbox_zabbix_status:zabbixhost_list' %}">
-          <i class="mdi mdi-arrow-left"></i> Späť na zoznam Hosty
-        </a>
-      </div>
     </div>
+  </div>
 
-    <div class="col col-12 col-xl-8">
+  <div class="row">
+    <div class="col col-12">
       {% if not can_add_device and not can_add_vm %}
         <div class="alert alert-warning">
           Nemáš oprávnenie na vytvorenie zariadenia ani VM.

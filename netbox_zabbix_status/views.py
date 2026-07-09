@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone as dt_timezone
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -32,6 +33,7 @@ from .zabbix import (
     HISTORY_LIMIT,
     ZabbixConfigError,
     get_config,
+    get_host_inventory,
     get_live_problems,
     get_problem_history,
     get_setting,
@@ -555,6 +557,17 @@ def _best_interface_ip(interfaces):
     return None
 
 
+def _round_coord(value):
+    """Zabbix inventory GPS súradnice majú bežne viac než 6 desatinných miest
+    (napr. '48.7782926184094') — NetBoxove Device.latitude/longitude majú
+    decimal_places=6, odoslanie neorezanej hodnoty by pri uložení spadlo na
+    validácii. Vráti None pri neplatnej/prázdnej hodnote."""
+    try:
+        return str(Decimal(value).quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, TypeError):
+        return None
+
+
 def _guess_site(host_groups):
     """Odhad Site podľa mena Zabbix host group — vráti pk len ak presne jedna
     Site zodpovedá (case-insensitive) naprieč všetkými group menami, inak None
@@ -655,12 +668,26 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
             common['site'] = site_pk
         ip_initial = {'address': f'{ip}/32', 'status': 'active', 'primary_for_parent': True} if ip else {}
 
+        # GPS súradnice (ak má host vyplnené Zabbix inventory) — len pre Device,
+        # VirtualMachineForm nemá latitude/longitude (fyzická poloha nedáva pre VM zmysel)
+        device_initial = dict(common)
+        try:
+            inventory = get_host_inventory(host.zabbix_hostid)
+        except Exception:
+            inventory = {}
+        lat = _round_coord(inventory.get('location_lat'))
+        if lat is not None:
+            device_initial['latitude'] = lat
+        lon = _round_coord(inventory.get('location_lon'))
+        if lon is not None:
+            device_initial['longitude'] = lon
+
         return {
             'host': host,
             'has_ip': bool(ip),
             'can_add_device': request.user.has_perm('dcim.add_device'),
             'can_add_vm': request.user.has_perm('virtualization.add_virtualmachine'),
-            'device_form': DeviceForm(initial=common, prefix='device'),
+            'device_form': DeviceForm(initial=device_initial, prefix='device'),
             'iface_form': InterfaceForm(
                 initial={'name': 'Loopback0', 'type': 'virtual', 'enabled': True}, prefix='iface'
             ),
