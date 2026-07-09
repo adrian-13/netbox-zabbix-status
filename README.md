@@ -235,6 +235,10 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   teraz daná výhradne existenciou spárovaného hosta pre daný objekt;
   `matching_enabled` naďalej ovplyvňuje len sync job (nové automatické väzby) a
   agregované pohľady (dashboard, sub-voľby v Nastaveniach).
+- **História problémov aj na detaile Zabbix hosta** (Zabbix → Hosty → detail) —
+  rovnaká karta ako na Device/VM tabe (rýchle rozsahy 1h/6h/24h/7d/30d + vlastný
+  UTC rozsah), teraz zdieľaná cez `inc/history_card.html`, aby obe miesta
+  nemohli vizuálne rozísť.
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
