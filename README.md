@@ -224,6 +224,12 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 
 ## Changelog
 
+### Unreleased
+- **Changelog pre nastavenia pluginu** — `ZabbixConfiguration` je teraz `NetBoxModel`
+  (predtým plain model bez auditu); uloženie v Zabbix → Nastavenia vytvára
+  `ObjectChange` záznam (kto/kedy/z akej hodnoty na akú), dostupný cez nové
+  tlačidlo „Changelog" na stránke nastavení.
+
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
   Nepokryté VM / Nespárované hosty) aj jej pohľady; nespárovaných hostov nájdeš
