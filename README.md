@@ -11,6 +11,143 @@ len na čítanie.
 
 Návrh a plný rozsah: pozri `ZABBIX-PLUGIN-SPEC.md` v repe netbox-docker.
 
+## Požiadavky
+
+| Závislosť | Verzia |
+|---|---|
+| NetBox | 4.6 alebo novší |
+| Python | 3.10 alebo novší |
+| zabbix_utils | ≥ 2.0 |
+| Redis + RQ worker | Štandardná NetBox požiadavka (`netbox-worker`/`netbox-rq` služba) |
+
+> **Dôležité:** RQ worker musí bežať — periodický sync („Zabbix sync" system job)
+> aj tlačidlo „Obnoviť zo Zabbixu" bez neho nikdy neprebehnú.
+
+Tento repozitár je **privátny** — inštalácia cez `pip install git+https://...`
+alebo `git clone` vyžaduje, aby mal inštalujúci stroj/účet prístup na GitHub
+(SSH kľúč alebo token pre účet vlastniaci repo).
+
+## Inštalácia
+
+### Do netbox-docker (spôsob použitý v tomto nasadení)
+
+Repo sa pridáva ako sibling adresár vedľa `netbox-docker` a napojí sa cez
+`docker-compose.override.yml` (rovnaký vzor ako pri iných lokálnych pluginoch):
+
+```bash
+# 1. Naklonuj plugin ako sibling repo vedľa netbox-docker
+cd ..
+git clone https://github.com/adrian-13/netbox-zabbix-status.git netbox-plugin-zabbix-status
+cd netbox-docker
+```
+
+V `docker-compose.override.yml` pridaj (alebo rozšír existujúce `netbox`/
+`netbox-worker` služby o) build a bind-mount:
+
+```yaml
+services:
+  netbox:
+    image: netbox-zabbix-status:dev
+    pull_policy: never
+    build:
+      context: ../netbox-plugin-zabbix-status
+      dockerfile: Dockerfile
+      args:
+        # Priamo na oficiálny image — ak reťazíš viac lokálnych pluginov,
+        # nastav sem miesto toho výsledný image predchádzajúceho pluginu
+        NETBOX_IMAGE: netboxcommunity/netbox:v4.6-5.0.1
+    env_file:
+      - path: env/zabbix.env
+        required: false
+    volumes:
+      - ../netbox-plugin-zabbix-status:/opt/netbox-plugin-zabbix-status
+  netbox-worker:
+    image: netbox-zabbix-status:dev
+    pull_policy: never
+    env_file:
+      - path: env/zabbix.env
+        required: false
+    volumes:
+      - ../netbox-plugin-zabbix-status:/opt/netbox-plugin-zabbix-status
+```
+
+V `configuration/plugins.py`:
+
+```python
+from os import environ
+
+PLUGINS = ["netbox_zabbix_status"]
+
+PLUGINS_CONFIG = {
+    "netbox_zabbix_status": {
+        "api_url": environ.get("ZABBIX_API_URL", ""),
+        "api_token": environ.get("ZABBIX_API_TOKEN", ""),
+        "web_url": environ.get("ZABBIX_WEB_URL", ""),  # deep-linky; default = api_url
+        "verify_ssl": environ.get("ZABBIX_VERIFY_SSL", "true").lower() == "true",
+    },
+}
+```
+
+Vytvor `env/zabbix.env` (drž ho mimo gitu — obsahuje secret) s read-only API
+tokenom zo Zabbixu (*Users → API tokens*):
+
+```
+ZABBIX_API_URL=https://zabbix.example.com
+ZABBIX_API_TOKEN=<read-only API token>
+ZABBIX_WEB_URL=
+ZABBIX_VERIFY_SSL=true
+```
+
+Postav image a nahoď kontajnery — migrácie aplikuje entrypoint automaticky:
+
+```bash
+docker compose build netbox
+docker compose up -d
+```
+
+### Iná NetBox inštalácia (mimo Docker)
+
+```bash
+source /opt/netbox/venv/bin/activate
+pip install git+https://github.com/adrian-13/netbox-zabbix-status.git@v0.3.0
+```
+
+V `configuration.py`:
+
+```python
+PLUGINS = ["netbox_zabbix_status"]
+
+PLUGINS_CONFIG = {
+    "netbox_zabbix_status": {
+        "api_url": "https://zabbix.example.com",
+        "api_token": "<read-only API token>",
+    },
+}
+```
+
+```bash
+cd /opt/netbox/netbox
+python manage.py migrate
+python manage.py collectstatic --no-input
+sudo systemctl restart netbox netbox-rq
+```
+
+### Overenie inštalácie
+
+```bash
+# Migrácie — všetkých 5 (rastie s verziou) musí byť [X]
+docker compose exec netbox ./manage.py showmigrations netbox_zabbix_status
+
+# Spojenie na Zabbix API — vypíše verziu, počet hostov a problémov
+docker compose exec netbox ./manage.py zabbix_check
+```
+
+V NetBox navigácii by sa mala objaviť položka **Zabbix** (Dashboard, Hosty,
+Problémy, Nastavenia) a po prvom synce panel + tab „Zabbix" na spárovaných
+zariadeniach/VM. Všetky nastavenia správania (párovanie, severity, interval
+syncu…) sa potom dolaďujú graficky v **Zabbix → Nastavenia** — pozri sekciu
+[Konfigurácia](#konfigurácia) nižšie.
+
 ## Stav
 
 - [x] M1 — skeleton: PluginConfig, modely (`ZabbixHost`, `ZabbixProblem`),
@@ -81,17 +218,13 @@ ako seed default pred prvým uložením:
 | `dashboard_severities` | `[]` | Severity zobrazované v dlaždiciach a paneloch dashboardu; prázdne = všetky od `min_severity` |
 | `dashboard_refresh` | `60` | Auto-refresh dashboardu v sekundách (`0` = vypnutý) |
 
-## Overenie spojenia
-
-```
-docker compose exec netbox ./manage.py zabbix_check
-```
-
 ## Vývoj
 
+Pozri vyššie sekciu **Inštalácia → Do netbox-docker** pre kompletný recept.
 Repo je bind-mountnuté do kontajnerov cez `docker-compose.override.yml`
 v netbox-docker (editable install) — zmeny kódu sa prejavia po reštarte
-kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí.
+kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
+(`pyproject.toml`).
 
 ## Changelog
 
