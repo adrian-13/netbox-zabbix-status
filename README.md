@@ -291,7 +291,17 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   na 6 desatinných miest podľa limitu `Device.latitude`/`longitude`. Ikona
   „+" v zozname Hosty je teraz plnofarebné tlačidlo (`btn btn-primary`),
   rovnaký vzor ako natívne Edit/Delete tlačidlá — automaticky teda použije
-  aj NetBoxovu vlastnú teal farbu (tmavý aj svetlý režim).
+  aj NetBoxovu vlastnú teal farbu (tmavý aj svetlý režim). Pole Site sa navyše
+  vie predvyplniť aj priamo z explicitného Zabbix host tagu (default kľúč
+  `nbx_siteid`, konfigurovateľné v Zabbix → Nastavenia → „Import zo Zabbixu"),
+  ktorého hodnota je priamo NetBox Site ID — napr. tag `nbx_siteid=63` znamená
+  Site pk 63. Má prednosť pred starším odhadom podľa mena host group
+  (`_guess_site()`, ktorý v tomto prostredí prakticky nikdy netrafí, keďže
+  Zabbix host groups sú organizačné kategórie a NetBox Site mená fyzické
+  adresy) — tag je totiž explicitný krížový odkaz nastavený človekom, nie
+  odhad. Prázdny kľúč tagu vypína funkciu úplne (padá späť na pôvodné
+  správanie). GPS aj tag sa čítajú jedným spoločným live dopytom na Zabbix API
+  (`get_host_import_hints()`), nie dvomi samostatnými.
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
