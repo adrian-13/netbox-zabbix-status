@@ -89,6 +89,18 @@ class ZabbixConfiguration(NetBoxModel):
         verbose_name='Auto-refresh dashboardu (s)',
         help_text='0 = bez automatického obnovovania.',
     )
+    site_id_tag_key = models.CharField(
+        max_length=64,
+        default='nbx_siteid',
+        blank=True,
+        verbose_name='Tag pre Site ID',
+        help_text=(
+            'Kľúč Zabbix host tagu, ktorého hodnota je NetBox Site ID (napr. tag '
+            '"nbx_siteid" s hodnotou "63" znamená Site pk=63). Použije sa na '
+            'predvyplnenie Site pri importe nespárovaného hosta, má prednosť pred '
+            'odhadom podľa host group. Prázdne = vypnuté.'
+        ),
+    )
 
     class Meta:
         verbose_name = 'Zabbix nastavenia'
@@ -120,6 +132,7 @@ class ZabbixConfiguration(NetBoxModel):
                 dashboard_matched_only=bool(cfg.get('dashboard_matched_only', True)),
                 dashboard_severities=list(cfg.get('dashboard_severities', [])),
                 dashboard_refresh=int(cfg.get('dashboard_refresh', 60)),
+                site_id_tag_key=str(cfg.get('site_id_tag_key', 'nbx_siteid')),
             )
         return obj
 

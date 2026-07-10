@@ -84,12 +84,12 @@ def get_live_problems(hostid: int) -> list:
     return problems
 
 
-def get_host_inventory(hostid: int) -> dict:
-    """GPS súradnice hosta z jeho Zabbix inventory, priamo z API — podobne ako
-    história problémov sa nikde neukladá (treba len raz, pri predvyplnení
-    importného formulára). Prázdny dict, ak host nemá inventory zapnuté alebo
-    súradnice nevyplnené."""
-    cache_key = f'{PLUGIN_NAME}:inventory:{hostid}'
+def get_host_import_hints(hostid: int) -> dict:
+    """GPS súradnice a host tagy pre predvyplnenie importného formulára —
+    jeden live dopyt na Zabbix API (namiesto dvoch), keďže obe veci treba len
+    raz, pri otvorení stránky importu. Nikde sa neukladá do DB, rovnaký
+    princíp ako história problémov. Vráti {'inventory': {...}, 'tags': [...]}."""
+    cache_key = f'{PLUGIN_NAME}:import_hints:{hostid}'
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -99,11 +99,18 @@ def get_host_inventory(hostid: int) -> dict:
         hostids=[hostid],
         output=[],
         selectInventory=['location_lat', 'location_lon'],
+        selectTags='extend',
     )
-    # Zabbix vráti 'inventory': [] (nie {}) keď má host vypnuté inventory
-    inventory = (hosts[0].get('inventory') or {}) if hosts else {}
-    cache.set(cache_key, inventory, int(get_setting('cache_ttl', 30)))
-    return inventory
+    if hosts:
+        # Zabbix vráti 'inventory': [] (nie {}) keď má host vypnuté inventory
+        result = {
+            'inventory': hosts[0].get('inventory') or {},
+            'tags': hosts[0].get('tags') or [],
+        }
+    else:
+        result = {'inventory': {}, 'tags': []}
+    cache.set(cache_key, result, int(get_setting('cache_ttl', 30)))
+    return result
 
 
 def get_problem_history(hostid: int, time_from: int, time_till: int) -> list:

@@ -33,7 +33,7 @@ from .zabbix import (
     HISTORY_LIMIT,
     ZabbixConfigError,
     get_config,
-    get_host_inventory,
+    get_host_import_hints,
     get_live_problems,
     get_problem_history,
     get_setting,
@@ -582,6 +582,31 @@ def _guess_site(host_groups):
     return None
 
 
+def _site_from_tag(tags, tag_key):
+    """Site pk z explicitného Zabbix host tagu (napr. nbx_siteid=63) — na
+    rozdiel od _guess_site() nejde o odhad, je to priamy krížový odkaz
+    nastavený človekom, preto má prednosť. None ak tag chýba, hodnota nie je
+    celé číslo v rozsahu platného pk, alebo taká Site v NetBoxe neexistuje."""
+    if not tag_key:
+        return None
+    for t in tags:
+        if t.get('tag') != tag_key:
+            continue
+        try:
+            site_pk = int(t.get('value', ''))
+            # int() má neobmedzenú presnosť — hodnota mimo rozsahu stĺpca
+            # (Site.id je BigAutoField/bigint, napr. omylom vložený timestamp)
+            # by inak spadla na DB dotaze. 0 je platné pk (BigAutoField ho
+            # nevylučuje), preto dolná hranica <= 0, nie < 0.
+            if not (0 <= site_pk <= 9_223_372_036_854_775_807):
+                continue
+            if Site.objects.filter(pk=site_pk).exists():
+                return site_pk
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 class ZabbixHostImportView(LoginRequiredMixin, View):
     """Vstupný bod pre ručný import nespárovaného Zabbix hosta do NetBoxu.
 
@@ -660,9 +685,20 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         použité aj na znovu-vykreslenie po neúspešnej validácii (vtedy sa
         prepíšu tie za _save_device/_save_vm vo `forms` dicte)."""
         comments = self._build_comments(host)
-        site_pk = _guess_site(host.host_groups)
         ip = _best_interface_ip(host.interfaces)
         visible = host.visible_name or host.name
+
+        try:
+            hints = get_host_import_hints(host.zabbix_hostid)
+        except Exception:
+            hints = {'inventory': {}, 'tags': []}
+
+        # is not None (nie "or") — Site pk 0 by bol falsy a "or" by ho zahodil
+        # v prospech odhadu, hoci tag má vždy prednosť
+        site_pk = _site_from_tag(hints['tags'], get_setting('site_id_tag_key', 'nbx_siteid'))
+        if site_pk is None:
+            site_pk = _guess_site(host.host_groups)
+
         common = {'name': visible, 'comments': comments, 'status': 'active'}
         if site_pk is not None:
             common['site'] = site_pk
@@ -671,14 +707,10 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         # GPS súradnice (ak má host vyplnené Zabbix inventory) — len pre Device,
         # VirtualMachineForm nemá latitude/longitude (fyzická poloha nedáva pre VM zmysel)
         device_initial = dict(common)
-        try:
-            inventory = get_host_inventory(host.zabbix_hostid)
-        except Exception:
-            inventory = {}
-        lat = _round_coord(inventory.get('location_lat'))
+        lat = _round_coord(hints['inventory'].get('location_lat'))
         if lat is not None:
             device_initial['latitude'] = lat
-        lon = _round_coord(inventory.get('location_lon'))
+        lon = _round_coord(hints['inventory'].get('location_lon'))
         if lon is not None:
             device_initial['longitude'] = lon
 
