@@ -46,7 +46,8 @@ PROBLEM_SEVERITY_BADGE = """
 
 ZABBIX_LINK = """
 {% if record.get_zabbix_url %}
-  <a href="{{ record.get_zabbix_url }}" target="_blank" title="Otvoriť v Zabbixe">
+  <a class="btn btn-sm btn-primary" href="{{ record.get_zabbix_url }}" target="_blank"
+     aria-label="Otvoriť v Zabbixe" title="Otvoriť v Zabbixe">
     <i class="mdi mdi-open-in-new"></i>
   </a>
 {% endif %}

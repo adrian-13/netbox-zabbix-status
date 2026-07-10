@@ -258,7 +258,9 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   `{EVENT.URL}`). Vyžaduje `zabbix_triggerid` na `ZabbixProblem` (migrácia 0007,
   doplní sa pri najbližšom synce).
 - **Priamy odkaz na hosta v Zabbixe aj v zozname Hosty** — rovnaká ikona otvorí
-  dashboard hosta priamo v Zabbixe (`ZabbixHost.get_zabbix_url()`).
+  dashboard hosta priamo v Zabbixe (`ZabbixHost.get_zabbix_url()`). V zoznamoch
+  Hosty aj Problémy je „Otvoriť v Zabbixe" plnofarebné tlačidlo (`btn btn-primary`,
+  rovnaký vzhľad ako import „+"), nie holá ikona.
 - **Import nespárovaného hosta ako nové zariadenie/VM** — nová ikona pri
   nespárovaných hostoch v zozname Hosty (viditeľná len bez existujúcej väzby
   a s oprávnením na pridanie Device alebo VM) vedie na stránku s dvomi
