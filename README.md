@@ -289,9 +289,11 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   ak ich host má vyplnené — číta sa priamo zo Zabbix API pri otvorení
   stránky (nepretrváva sa v DB, rovnako ako história problémov), zaokrúhlené
   na 6 desatinných miest podľa limitu `Device.latitude`/`longitude`. Ikona
-  „+" v zozname Hosty je teraz plnofarebné tlačidlo (`btn btn-primary`),
-  rovnaký vzor ako natívne Edit/Delete tlačidlá — automaticky teda použije
-  aj NetBoxovu vlastnú teal farbu (tmavý aj svetlý režim). Pole Site sa navyše
+  „+" je plnofarebné tlačidlo (`btn btn-primary`), rovnaký vzor ako natívne
+  Edit/Delete tlačidlá — automaticky teda použije aj NetBoxovu vlastnú teal
+  farbu (tmavý aj svetlý režim) — a sedí hneď vedľa tlačidla Edit v akčnom
+  stĺpci (cez `ActionsColumn.extra_buttons`, rovnako ako VLANGROUP_BUTTONS
+  v NetBox core), nie ako samostatný stĺpec. Pole Site sa navyše
   vie predvyplniť aj priamo z explicitného Zabbix host tagu (default kľúč
   `nbx_siteid`, konfigurovateľné v Zabbix → Nastavenia → „Import zo Zabbixu"),
   ktorého hodnota je priamo NetBox Site ID — napr. tag `nbx_siteid=63` znamená
