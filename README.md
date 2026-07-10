@@ -227,6 +227,17 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 ## Changelog
 
 ### Unreleased
+- **Oprava: sync už nezapĺňa globálny NetBox Changelog** — `ZabbixHost`/
+  `ZabbixProblem` sú `NetBoxModel`, takže každé prepísanie počas syncu
+  (`last_synced`, `problem_count`, availability...) sa logovalo ako
+  `ObjectChange`. Periodický sync job to nespôsoboval (beží mimo request
+  kontextu, NetBox tam logovanie automaticky vynecháva), ale ručné tlačidlo
+  „Obnoviť zo Zabbixu" áno — bežalo v request kontexte, takže každé kliknutie
+  vytvorilo jeden záznam na hosta. V tejto inštalácii tak za 2 dni vzniklo
+  7402 z celkových 15542 (~48 %) všetkých `ObjectChange` záznamov v NetBoxe.
+  `sync.run_sync()` teraz počas zápisu dočasne vypne request kontext, presne
+  ako pri periodickom jobe — dáta sa aktualizujú rovnako, len sa nezaznamenajú
+  do auditu. `ZabbixConfiguration`'s Changelog (nižšie) tým nie je dotknutý.
 - **Changelog pre nastavenia pluginu** — `ZabbixConfiguration` je teraz `NetBoxModel`
   (predtým plain model bez auditu); uloženie v Zabbix → Nastavenia vytvára
   `ObjectChange` záznam (kto/kedy/z akej hodnoty na akú), dostupný cez nové
