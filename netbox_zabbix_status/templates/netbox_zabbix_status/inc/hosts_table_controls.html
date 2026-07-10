@@ -1,0 +1,39 @@
+{% extends 'inc/table_controls_htmx.html' %}
+{% comment %}
+Dropdown na výber zobrazovaných Zabbix tagov, vložený do rovnakého riadku ako
+natívne „Configure Table" — nie do page-level {% block controls %} vedľa
+Export/Add (tam pôsobil odtrhnuto od tabuľky, ktorú konfiguruje) a nie priamo
+do <th> hlavičky stĺpca „Zabbix tagy" (ten je v <div class="table-responsive">
+s overflow-x:auto, dropdown-menu vyčnievajúci z <th> by sa mohol orezať).
+Rovnaký vzor ako NetBoxov vlastný dcim/device/inc/interface_table_controls.html
+(filter dropdown pre Device Interfaces tab cez tento istý extra_table_controls blok).
+{% endcomment %}
+
+{% block extra_table_controls %}
+  {% if perms.netbox_zabbix_status.change_zabbixconfiguration %}
+    <div class="dropdown d-inline">
+      <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown"
+              data-bs-auto-close="outside" aria-expanded="false" title="Zobrazované Zabbix tagy">
+        <i class="mdi mdi-tag-multiple" aria-hidden="true"></i>
+      </button>
+      <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 260px;">
+        <form method="post" action="{% url 'plugins:netbox_zabbix_status:hosts_visible_tags' %}">
+          {% csrf_token %}
+          <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
+          <h6 class="dropdown-header px-0">Zobrazované Zabbix tagy</h6>
+          {% for opt in tag_key_options %}
+            <label class="form-check mb-1">
+              <input type="checkbox" class="form-check-input" name="tag_keys"
+                     value="{{ opt.value }}" {% if opt.checked %}checked{% endif %}>
+              <span class="form-check-label">{{ opt.value }}</span>
+            </label>
+          {% empty %}
+            <div class="form-text">Zatiaľ žiadne tagy zo Zabbixu.</div>
+          {% endfor %}
+          <div class="form-text">Nič nevybrané = zobraziť všetky</div>
+          <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Uložiť</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endblock extra_table_controls %}

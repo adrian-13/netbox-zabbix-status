@@ -27,8 +27,9 @@ class ZabbixSettingsForm(forms.ModelForm):
                   'napr. „kinet.sk, firma.local".',
     )
     # dashboard_severities sa edituje priamo z gear dropdownu na dashboarde
-    # (DashboardSeveritiesView) — tu zámerne nie je, aby jedno miesto neprepisovalo
-    # výber uložený druhým.
+    # (DashboardSeveritiesView), visible_tag_keys rovnako z gear dropdownu na
+    # zozname Hostov (HostsVisibleTagsView) — tu zámerne nie sú, aby jedno
+    # miesto neprepisovalo výber uložený druhým.
 
     class Meta:
         model = ZabbixConfiguration

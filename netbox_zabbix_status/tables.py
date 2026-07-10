@@ -93,7 +93,7 @@ class ZabbixHostTable(NetBoxTable):
     last_synced = columns.DateTimeColumn(verbose_name='Sync')
     tags = columns.TagColumn(url_name='plugins:netbox_zabbix_status:zabbixhost_list')
     zabbix_tags = tables.TemplateColumn(
-        template_code=ZABBIX_TAGS, verbose_name='Zabbix tagy', orderable=False
+        template_code=ZABBIX_TAGS, verbose_name='Zabbix tagy', orderable=False, accessor='display_tags'
     )
     # „Otvoriť v Zabbixe" (holá ikona, pôvodný vizuál) + import „+" (plné
     # tlačidlo) idú ako extra_buttons hneď vedľa edit tlačidla, nie ako

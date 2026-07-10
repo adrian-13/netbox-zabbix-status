@@ -14,6 +14,7 @@ from dcim.forms import DeviceForm, InterfaceForm
 from dcim.models import Device, Site
 from ipam.forms import IPAddressForm
 from netbox.views import generic
+from utilities.request import safe_for_redirect
 from utilities.views import ViewTab, register_model_view
 from virtualization.forms import VirtualMachineForm, VMInterfaceForm
 from virtualization.models import VirtualMachine
@@ -289,6 +290,20 @@ class ZabbixHostListView(generic.ObjectListView):
     filterset = ZabbixHostFilterSet
     filterset_form = ZabbixHostFilterForm
     actions = {'export': {'view'}}
+    template_name = 'netbox_zabbix_status/zabbixhost_list.html'
+
+    def get_extra_context(self, request):
+        # _distinct_tag_keys() skenuje zabbix_tags naprieč VŠETKÝMI hostmi —
+        # nerobiť to zbytočne pre používateľov, ktorí gear dropdown (skrytý
+        # v šablóne cez perms) aj tak nikdy neuvidia
+        if not request.user.has_perm('netbox_zabbix_status.change_zabbixconfiguration'):
+            return {'tag_key_options': []}
+        selected = set(get_setting('visible_tag_keys', []) or [])
+        return {
+            'tag_key_options': [
+                {'value': key, 'checked': key in selected} for key in _distinct_tag_keys()
+            ],
+        }
 
 
 @register_model_view(ZabbixHost)
@@ -471,6 +486,32 @@ class DashboardSeveritiesView(PermissionRequiredMixin, View):
         return redirect('plugins:netbox_zabbix_status:dashboard')
 
 
+class HostsVisibleTagsView(PermissionRequiredMixin, View):
+    """Rýchle uloženie výberu Zabbix tag kľúčov zobrazovaných v stĺpci
+    „Zabbix tagy" na zozname Hostov, cez gear dropdown v controls.
+    Zapisuje to isté nastavenie ako stránka Nastavenia (visible_tag_keys) —
+    tam sa ale priamo needituje (rovnaká filozofia ako dashboard_severities),
+    aby jedno miesto neprepisovalo výber uložený druhým."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixconfiguration'
+
+    def post(self, request):
+        keys = [k for k in request.POST.getlist('tag_keys') if k]
+        config = ZabbixConfiguration.get_solo()
+        config.visible_tag_keys = keys
+        config.save()
+        if keys:
+            messages.success(request, f'Zobrazujú sa len tagy: {", ".join(keys)}.')
+        else:
+            messages.success(request, 'Zobrazujú sa všetky Zabbix tagy.')
+        return_url = request.POST.get('return_url', '')
+        if not safe_for_redirect(return_url):
+            # startswith('/') by pustil aj protokol-relatívne URL ako '//evil.example.com/'
+            # (prehliadač ich berie ako absolútnu presmerovanie) — safe_for_redirect to odmietne
+            return_url = reverse('plugins:netbox_zabbix_status:zabbixhost_list')
+        return redirect(return_url)
+
+
 class ZabbixRefreshView(LoginRequiredMixin, View):
     """Tlačidlo „Obnoviť zo Zabbixu": synchrónne spustí run_sync() (čerstvé dáta
     hneď, nie až pri ďalšom naplánovanom behu) a vráti sa na pôvodnú stránku."""
@@ -489,7 +530,7 @@ class ZabbixRefreshView(LoginRequiredMixin, View):
                 f"{stats['problems_total']} problémov ({stats['duration_s']} s).",
             )
         return_url = request.POST.get('return_url', '')
-        if not return_url.startswith('/'):
+        if not safe_for_redirect(return_url):
             return_url = reverse('plugins:netbox_zabbix_status:dashboard')
         return redirect(return_url)
 
@@ -580,6 +621,17 @@ def _guess_site(host_groups):
     if len(matched_pks) == 1:
         return matched_pks.pop()
     return None
+
+
+def _distinct_tag_keys():
+    """Zoznam všetkých unikátnych Zabbix tag kľúčov naprieč synced hostmi —
+    pre checkbox voľbu v gear dropdowne na zozname Hostov (dynamicky, nie
+    pevný zoznam ako pri dashboard_severities, keďže tag kľúče sú ľubovoľné
+    Zabbix stringy, nie fixná množina)."""
+    keys = set()
+    for tags in ZabbixHost.objects.values_list('zabbix_tags', flat=True):
+        keys.update(t.get('tag') for t in tags if t.get('tag'))
+    return sorted(keys)
 
 
 def _site_from_tag(tags, tag_key):

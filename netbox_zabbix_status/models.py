@@ -101,6 +101,15 @@ class ZabbixConfiguration(NetBoxModel):
             'odhadom podľa host group. Prázdne = vypnuté.'
         ),
     )
+    visible_tag_keys = models.JSONField(
+        default=list, blank=True,
+        verbose_name='Zobrazované Zabbix tagy',
+        help_text=(
+            'Ktoré Zabbix tag kľúče zobrazovať v stĺpci „Zabbix tagy" na zozname Hostov '
+            '(nastavuje sa priamo tam, cez ikonu ozubeného kolieska — nie tu). '
+            'Prázdne = zobraziť všetky.'
+        ),
+    )
 
     class Meta:
         verbose_name = 'Zabbix nastavenia'
@@ -133,6 +142,7 @@ class ZabbixConfiguration(NetBoxModel):
                 dashboard_severities=list(cfg.get('dashboard_severities', [])),
                 dashboard_refresh=int(cfg.get('dashboard_refresh', 60)),
                 site_id_tag_key=str(cfg.get('site_id_tag_key', 'nbx_siteid')),
+                visible_tag_keys=list(cfg.get('visible_tag_keys', [])),
             )
         return obj
 
@@ -248,6 +258,17 @@ class ZabbixHost(NetBoxModel):
     def site(self):
         obj = self.assigned_object
         return getattr(obj, 'site', None) if obj else None
+
+    @property
+    def display_tags(self):
+        """Zabbix tagy filtrované podľa ZabbixConfiguration.visible_tag_keys
+        (nastaviteľné cez gear dropdown v controls zoznamu Hostov) — prázdny
+        whitelist znamená zobraziť všetky tagy (pôvodné správanie)."""
+        from .zabbix import get_setting
+        visible = get_setting('visible_tag_keys', []) or []
+        if not visible:
+            return self.zabbix_tags
+        return [t for t in self.zabbix_tags if t.get('tag') in visible]
 
     def get_status_color(self):
         return ZabbixHostStatusChoices.colors.get(self.status)
