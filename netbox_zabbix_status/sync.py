@@ -6,6 +6,7 @@ periodický system job (jobs.py) aj `manage.py sync_zabbix`.
 """
 import logging
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone as dt_timezone
 
 from django.contrib.contenttypes.models import ContentType
@@ -17,12 +18,33 @@ from dcim.models import Device, Interface
 from ipam.models import IPAddress
 from virtualization.models import VirtualMachine, VMInterface
 
+from netbox.context import current_request
+
 from .choices import AvailabilityChoices, MatchMethodChoices, ZabbixHostStatusChoices
 from .matching import HostMatcher, normalize_hostname
 from .models import ZabbixHost, ZabbixProblem
 from .zabbix import get_client, get_setting
 
 logger = logging.getLogger('netbox.plugins.netbox_zabbix_status')
+
+
+@contextmanager
+def _no_changelog():
+    """ZabbixHost/ZabbixProblem sa tu prepisujú ako pravidelný snapshot zo
+    Zabbixu (last_synced, problem_count, availability...), nie ako zmeny
+    vykonané človekom — nepatria do ObjectChange auditu. NetBox loguje zmenu
+    len keď je nastavený `current_request` (periodický job beží mimo
+    request kontextu, takže sa aj tak nezaloguje), ALE tlačidlo „Obnoviť zo
+    Zabbixu" (ZabbixRefreshView) beží v request kontexte — bez tohto by pri
+    každom kliknutí vytvorilo jeden ObjectChange záznam na hosta. Reálne
+    nameraných 7402 z 15542 (~48 %) všetkých ObjectChange v inštalácii
+    pochádzalo presne odtiaľto (2 dni prevádzky)."""
+    token = current_request.set(None)
+    try:
+        yield
+    finally:
+        current_request.reset(token)
+
 
 # Zabbix interface/host availability: 0 unknown, 1 up, 2 down
 AVAILABILITY_MAP = {
@@ -196,7 +218,7 @@ def run_sync():
         'problems_unassigned': 0,
     }
 
-    with transaction.atomic():
+    with _no_changelog(), transaction.atomic():
         existing = {h.zabbix_hostid: h for h in ZabbixHost.objects.all()}
         host_objs = {}  # zabbix hostid (str) -> ZabbixHost
 
