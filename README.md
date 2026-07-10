@@ -316,6 +316,17 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   stĺpci „Zabbix tagy" (default zapnutý). Umožňuje napr. skontrolovať, či má
   host nastavený `nbx_siteid` tag pre import (vyššie), bez nutnosti chodiť
   do Zabbixu. Dostupné aj cez REST API (`ZabbixHostSerializer`).
+- **Výber zobrazovaných Zabbix tagov** — pri hostoch s viacerými tagmi (`class`,
+  `vendor`, `olt`, ...) stĺpec „Zabbix tagy" rýchlo zaberie veľa miesta. Ikona
+  vedľa „Configure Table" (nie v hlavičke stĺpca — tá je v scrollovacom
+  kontajneri, dropdown by sa mohol orezať; ani vedľa Export v hornej lište —
+  odtrhnuté od tabuľky) otvorí dropdown so zoznamom všetkých reálne
+  použitých tag kľúčov (dynamicky, nie pevný zoznam), zaškrtneš len tie, čo
+  chceš vidieť. Prázdny výber = zobraziť všetky (default). Filtruje len
+  zobrazenie (`ZabbixHost.display_tags`) — surové `zabbix_tags` ostávajú
+  netknuté. Nastavenie (`ZabbixConfiguration.visible_tag_keys`) sa needituje
+  na stránke Nastavenia, len cez tento dropdown (rovnaká filozofia ako
+  `dashboard_severities`).
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
