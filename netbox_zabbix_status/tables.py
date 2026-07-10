@@ -12,7 +12,7 @@ _MATCHING_ENABLED = get_setting('matching_enabled', True)
 if _MATCHING_ENABLED:
     _HOST_DEFAULT_COLUMNS = (
         'name', 'device', 'virtual_machine', 'status', 'match_method',
-        'problem_count', 'max_severity', 'last_synced', 'zabbix_tags', 'zabbix_link',
+        'problem_count', 'max_severity', 'last_synced', 'zabbix_tags',
     )
     # 'host' (meno zo Zabbixu) je v defaulte — device/VM/site sú prázdne
     # pri problémoch na nespárovaných hostoch a riadok by nemal identifikáciu
@@ -24,7 +24,7 @@ else:
     # Čistý Zabbix viewer — NetBox stĺpce sú default skryté (dajú sa zapnúť ručne)
     _HOST_DEFAULT_COLUMNS = (
         'name', 'visible_name', 'status', 'agent_available', 'snmp_available',
-        'problem_count', 'max_severity', 'last_synced', 'zabbix_tags', 'zabbix_link',
+        'problem_count', 'max_severity', 'last_synced', 'zabbix_tags',
     )
     _PROBLEM_DEFAULT_COLUMNS = (
         'severity', 'name', 'host', 'acknowledged', 'started', 'opdata', 'zabbix_link',
@@ -46,8 +46,7 @@ PROBLEM_SEVERITY_BADGE = """
 
 ZABBIX_LINK = """
 {% if record.get_zabbix_url %}
-  <a class="btn btn-sm btn-primary" href="{{ record.get_zabbix_url }}" target="_blank"
-     aria-label="Otvoriť v Zabbixe" title="Otvoriť v Zabbixe">
+  <a href="{{ record.get_zabbix_url }}" target="_blank" title="Otvoriť v Zabbixe" class="me-1">
     <i class="mdi mdi-open-in-new"></i>
   </a>
 {% endif %}
@@ -96,13 +95,13 @@ class ZabbixHostTable(NetBoxTable):
     zabbix_tags = tables.TemplateColumn(
         template_code=ZABBIX_TAGS, verbose_name='Zabbix tagy', orderable=False
     )
-    zabbix_link = tables.TemplateColumn(
-        template_code=ZABBIX_LINK, verbose_name='', orderable=False
+    # „Otvoriť v Zabbixe" (holá ikona, pôvodný vizuál) + import „+" (plné
+    # tlačidlo) idú ako extra_buttons hneď vedľa edit tlačidla, nie ako
+    # samostatné stĺpce — rovnaký vzor ako VLANGROUP_BUTTONS v NetBox core.
+    # Poradie zachováva pôvodné: Zabbix odkaz vľavo od importu.
+    actions = columns.ActionsColumn(
+        actions=('edit',), extra_buttons=ZABBIX_LINK + IMPORT_LINK
     )
-    # Edit = ručné priradenie k zariadeniu/VM; ostatné dáta sú synced (read-only).
-    # Import „+" ide ako extra_buttons hneď vedľa edit tlačidla (nie samostatný
-    # stĺpec) — rovnaký vzor ako VLANGROUP_BUTTONS v NetBox core.
-    actions = columns.ActionsColumn(actions=('edit',), extra_buttons=IMPORT_LINK)
 
     class Meta(NetBoxTable.Meta):
         model = ZabbixHost
@@ -111,7 +110,7 @@ class ZabbixHostTable(NetBoxTable):
             'virtual_machine', 'site', 'status', 'match_method',
             'agent_available', 'snmp_available', 'ipmi_available', 'jmx_available',
             'active_available', 'in_maintenance', 'proxy_name', 'problem_count',
-            'max_severity', 'last_synced', 'tags', 'zabbix_tags', 'zabbix_link',
+            'max_severity', 'last_synced', 'tags', 'zabbix_tags',
         )
         default_columns = _HOST_DEFAULT_COLUMNS
 
