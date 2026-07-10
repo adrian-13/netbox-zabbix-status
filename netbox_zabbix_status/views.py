@@ -33,7 +33,7 @@ from .zabbix import (
     HISTORY_LIMIT,
     ZabbixConfigError,
     get_config,
-    get_host_import_hints,
+    get_host_inventory,
     get_live_problems,
     get_problem_history,
     get_setting,
@@ -688,14 +688,9 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         ip = _best_interface_ip(host.interfaces)
         visible = host.visible_name or host.name
 
-        try:
-            hints = get_host_import_hints(host.zabbix_hostid)
-        except Exception:
-            hints = {'inventory': {}, 'tags': []}
-
         # is not None (nie "or") — Site pk 0 by bol falsy a "or" by ho zahodil
         # v prospech odhadu, hoci tag má vždy prednosť
-        site_pk = _site_from_tag(hints['tags'], get_setting('site_id_tag_key', 'nbx_siteid'))
+        site_pk = _site_from_tag(host.zabbix_tags, get_setting('site_id_tag_key', 'nbx_siteid'))
         if site_pk is None:
             site_pk = _guess_site(host.host_groups)
 
@@ -706,11 +701,15 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
 
         # GPS súradnice (ak má host vyplnené Zabbix inventory) — len pre Device,
         # VirtualMachineForm nemá latitude/longitude (fyzická poloha nedáva pre VM zmysel)
+        try:
+            inventory = get_host_inventory(host.zabbix_hostid)
+        except Exception:
+            inventory = {}
         device_initial = dict(common)
-        lat = _round_coord(hints['inventory'].get('location_lat'))
+        lat = _round_coord(inventory.get('location_lat'))
         if lat is not None:
             device_initial['latitude'] = lat
-        lon = _round_coord(hints['inventory'].get('location_lon'))
+        lon = _round_coord(inventory.get('location_lon'))
         if lon is not None:
             device_initial['longitude'] = lon
 

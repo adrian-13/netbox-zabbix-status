@@ -12,7 +12,7 @@ _MATCHING_ENABLED = get_setting('matching_enabled', True)
 if _MATCHING_ENABLED:
     _HOST_DEFAULT_COLUMNS = (
         'name', 'device', 'virtual_machine', 'status', 'match_method',
-        'problem_count', 'max_severity', 'last_synced', 'zabbix_link', 'import_link',
+        'problem_count', 'max_severity', 'last_synced', 'zabbix_tags', 'zabbix_link', 'import_link',
     )
     # 'host' (meno zo Zabbixu) je v defaulte — device/VM/site sú prázdne
     # pri problémoch na nespárovaných hostoch a riadok by nemal identifikáciu
@@ -24,7 +24,7 @@ else:
     # Čistý Zabbix viewer — NetBox stĺpce sú default skryté (dajú sa zapnúť ručne)
     _HOST_DEFAULT_COLUMNS = (
         'name', 'visible_name', 'status', 'agent_available', 'snmp_available',
-        'problem_count', 'max_severity', 'last_synced', 'zabbix_link', 'import_link',
+        'problem_count', 'max_severity', 'last_synced', 'zabbix_tags', 'zabbix_link', 'import_link',
     )
     _PROBLEM_DEFAULT_COLUMNS = (
         'severity', 'name', 'host', 'acknowledged', 'started', 'opdata', 'zabbix_link',
@@ -65,6 +65,15 @@ IMPORT_LINK = """
 {% endif %}
 """
 
+ZABBIX_TAGS = """
+{% load helpers %}
+{% for t in value %}
+  <span class="badge text-bg-secondary me-1">{{ t.tag }}{% if t.value %}: {{ t.value }}{% endif %}</span>
+{% empty %}
+  {{ ''|placeholder }}
+{% endfor %}
+"""
+
 
 class ZabbixHostTable(NetBoxTable):
     name = tables.Column(linkify=True, verbose_name='Meno')
@@ -83,6 +92,9 @@ class ZabbixHostTable(NetBoxTable):
     in_maintenance = columns.BooleanColumn(verbose_name='Maintenance')
     last_synced = columns.DateTimeColumn(verbose_name='Sync')
     tags = columns.TagColumn(url_name='plugins:netbox_zabbix_status:zabbixhost_list')
+    zabbix_tags = tables.TemplateColumn(
+        template_code=ZABBIX_TAGS, verbose_name='Zabbix tagy', orderable=False
+    )
     zabbix_link = tables.TemplateColumn(
         template_code=ZABBIX_LINK, verbose_name='', orderable=False
     )
@@ -99,7 +111,7 @@ class ZabbixHostTable(NetBoxTable):
             'virtual_machine', 'site', 'status', 'match_method',
             'agent_available', 'snmp_available', 'ipmi_available', 'jmx_available',
             'active_available', 'in_maintenance', 'proxy_name', 'problem_count',
-            'max_severity', 'last_synced', 'tags', 'zabbix_link', 'import_link',
+            'max_severity', 'last_synced', 'tags', 'zabbix_tags', 'zabbix_link', 'import_link',
         )
         default_columns = _HOST_DEFAULT_COLUMNS
 

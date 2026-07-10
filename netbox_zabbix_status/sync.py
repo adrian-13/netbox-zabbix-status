@@ -69,6 +69,7 @@ def fetch_hosts(api):
         selectInterfaces=['type', 'ip', 'dns', 'port', 'useip', 'available'],
         selectParentTemplates=['name'],
         selectHostGroups=['name'],
+        selectTags='extend',
     )
 
 
@@ -252,6 +253,7 @@ def run_sync():
 
             obj.host_groups = sorted(g['name'] for g in zh.get('hostgroups', []))
             obj.templates = sorted(t['name'] for t in zh.get('parentTemplates', []))
+            obj.zabbix_tags = zh.get('tags', [])
             obj.proxy_name = resolve_proxy_name(zh, proxy_names)[:200]
 
             # Väzba: manuálnu nikdy neprepisuj; existujúcu automatickú s platným

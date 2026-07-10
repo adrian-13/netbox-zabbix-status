@@ -16,7 +16,7 @@ class ZabbixHostSerializer(NetBoxModelSerializer):
             'device', 'virtual_machine', 'status', 'in_maintenance',
             'agent_available', 'snmp_available', 'ipmi_available', 'jmx_available',
             'active_available', 'proxy_name', 'host_groups', 'templates',
-            'interfaces', 'match_method', 'problem_count', 'max_severity',
+            'interfaces', 'zabbix_tags', 'match_method', 'problem_count', 'max_severity',
             'last_synced', 'tags', 'custom_fields', 'created', 'last_updated',
         )
         brief_fields = ('id', 'url', 'display', 'zabbix_hostid', 'name', 'visible_name')

@@ -187,6 +187,10 @@ class ZabbixHost(NetBoxModel):
     proxy_name = models.CharField(max_length=200, blank=True)
     host_groups = models.JSONField(default=list, blank=True)
     templates = models.JSONField(default=list, blank=True)
+    zabbix_tags = models.JSONField(
+        default=list, blank=True,
+        help_text='Zabbix host tagy (key/value) — zdroj napr. pre nbx_siteid pri importe.',
+    )
     interfaces = models.JSONField(
         default=list, blank=True,
         help_text='Zabbix interfejsy (typ, ip, dns, port) — zdroj pre IP párovanie',

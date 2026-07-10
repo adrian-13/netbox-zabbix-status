@@ -84,12 +84,14 @@ def get_live_problems(hostid: int) -> list:
     return problems
 
 
-def get_host_import_hints(hostid: int) -> dict:
-    """GPS súradnice a host tagy pre predvyplnenie importného formulára —
-    jeden live dopyt na Zabbix API (namiesto dvoch), keďže obe veci treba len
-    raz, pri otvorení stránky importu. Nikde sa neukladá do DB, rovnaký
-    princíp ako história problémov. Vráti {'inventory': {...}, 'tags': [...]}."""
-    cache_key = f'{PLUGIN_NAME}:import_hints:{hostid}'
+def get_host_inventory(hostid: int) -> dict:
+    """GPS súradnice hosta z jeho Zabbix inventory, priamo z API — nepretrváva
+    sa v DB (treba len raz, pri predvyplnení importného formulára). Prázdny
+    dict, ak host nemá inventory zapnuté alebo súradnice nevyplnené.
+    (Host tagy sa na rozdiel od GPS synchronizujú do ZabbixHost.zabbix_tags
+    pri pravidelnom syncu — sú statické infra metadáta vhodné aj na
+    zobrazenie v zozname Hostov, netreba ich preto ťahať live druhýkrát.)"""
+    cache_key = f'{PLUGIN_NAME}:inventory:{hostid}'
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -99,18 +101,11 @@ def get_host_import_hints(hostid: int) -> dict:
         hostids=[hostid],
         output=[],
         selectInventory=['location_lat', 'location_lon'],
-        selectTags='extend',
     )
-    if hosts:
-        # Zabbix vráti 'inventory': [] (nie {}) keď má host vypnuté inventory
-        result = {
-            'inventory': hosts[0].get('inventory') or {},
-            'tags': hosts[0].get('tags') or [],
-        }
-    else:
-        result = {'inventory': {}, 'tags': []}
-    cache.set(cache_key, result, int(get_setting('cache_ttl', 30)))
-    return result
+    # Zabbix vráti 'inventory': [] (nie {}) keď má host vypnuté inventory
+    inventory = (hosts[0].get('inventory') or {}) if hosts else {}
+    cache.set(cache_key, inventory, int(get_setting('cache_ttl', 30)))
+    return inventory
 
 
 def get_problem_history(hostid: int, time_from: int, time_till: int) -> list:
