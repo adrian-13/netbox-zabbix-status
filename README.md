@@ -300,8 +300,17 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   Zabbix host groups sú organizačné kategórie a NetBox Site mená fyzické
   adresy) — tag je totiž explicitný krížový odkaz nastavený človekom, nie
   odhad. Prázdny kľúč tagu vypína funkciu úplne (padá späť na pôvodné
-  správanie). GPS aj tag sa čítajú jedným spoločným live dopytom na Zabbix API
-  (`get_host_import_hints()`), nie dvomi samostatnými.
+  správanie). Tag sa číta z `ZabbixHost.zabbix_tags` (pozri nižšie — synced
+  pri pravidelnom syncu, rovnako ako host groups/šablóny), nie live dopytom;
+  GPS zostáva jediná vec, ktorá sa pri otvorení importnej stránky ťahá live
+  (`zabbix.get_host_inventory()`).
+- **Zabbix tagy ako stĺpec v zozname Hosty** — host-level tagy (`selectTags`
+  na `host.get`, napr. `nbx_siteid: 63`) sa teraz synchronizujú do nového
+  poľa `ZabbixHost.zabbix_tags` (rovnakým mechanizmom ako host groups a
+  šablóny — pri pravidelnom syncu, nie live), zobrazené ako odznaky v novom
+  stĺpci „Zabbix tagy" (default zapnutý). Umožňuje napr. skontrolovať, či má
+  host nastavený `nbx_siteid` tag pre import (vyššie), bez nutnosti chodiť
+  do Zabbixu. Dostupné aj cez REST API (`ZabbixHostSerializer`).
 
 ### v0.3.0
 - **Zjednodušenie menu** — odstránená sekcia „Konzistencia" (Nepokryté zariadenia /
