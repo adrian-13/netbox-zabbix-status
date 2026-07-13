@@ -1,4 +1,5 @@
 import django_tables2 as tables
+from django.db.models import Exists, OuterRef
 
 from dcim.tables import DeviceTable
 from netbox.tables import NetBoxTable, columns
@@ -164,14 +165,38 @@ DEVICE_ZABBIX_STATUS = """
 # core tabuliek pre pluginy (utilities.tables.register_table_column,
 # NetBox docs „Extending Core Tables"). Stĺpec je len PRIDANÝ do ponuky,
 # default skrytý (default_columns na DeviceTable je mimo nášho pluginu) —
-# používateľ si ho zapne cez „Configure Table".
+# používateľ si ho zapne cez „Configure Table". Zodpovedajúci filter
+# (rovnaké „zabbix_matched" meno) je v .filtersets/.forms — rozšírenie
+# DeviceFilterSet/DeviceFilterForm, žiadne oficiálne API naň nie je.
 register_table_column(
     tables.TemplateColumn(
         template_code=DEVICE_ZABBIX_STATUS,
         accessor='zabbix_hosts',
         verbose_name='Zabbix',
-        orderable=False,
+        orderable=True,
     ),
     'zabbix_status',
     DeviceTable,
 )
+
+
+def _order_zabbix_status(self, queryset, is_descending):
+    """Vlastná logika triedenia pre stĺpec „Zabbix" — nejde priamo
+    `.order_by('zabbix_hosts')` (reverse FK), lebo pri LEFT JOINe na hosta
+    s VIACERÝMI ZabbixHost záznamami (v tomto prostredí sa to reálne stáva)
+    by to duplikovalo riadky zariadenia v zozname. `Exists()` je korelovaný
+    subquery, nie join — vždy presne jeden riadok na Device, overené naživo
+    (70 zariadení, 2 s duplicitnou väzbou → `order_by('zabbix_hosts')` dávalo
+    72 riadkov, `Exists()` prístup správne 70).
+
+    django-tables2 si túto metódu nájde sám cez `getattr(table,
+    'order_' + column_name, ...)` pri KAŽDOM vytvorení DeviceTable (nie len
+    raz pri definícii triedy) — stačí ju pripojiť na triedu takto, netreba
+    žiadny ďalší hook."""
+    queryset = queryset.annotate(
+        _zabbix_matched=Exists(ZabbixHost.objects.filter(device=OuterRef('pk')))
+    ).order_by(('-' if is_descending else '') + '_zabbix_matched')
+    return queryset, True
+
+
+DeviceTable.order_zabbix_status = _order_zabbix_status

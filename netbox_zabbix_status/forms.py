@@ -1,8 +1,10 @@
 from django import forms
 
+from dcim.forms.filtersets import DeviceFilterForm
 from dcim.models import Device, DeviceRole, Site
 from netbox.forms import NetBoxModelFilterSetForm, NetBoxModelForm
 from tenancy.models import Tenant
+from utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
 from utilities.forms.fields import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from utilities.forms.rendering import FieldSet
 from virtualization.models import VirtualMachine
@@ -141,3 +143,23 @@ class ZabbixProblemFilterForm(NetBoxModelFilterSetForm):
     role_id = DynamicModelMultipleChoiceField(
         queryset=DeviceRole.objects.all(), required=False, label='Rola'
     )
+
+
+# Pole pre filter „zabbix_matched" na natívnom DeviceFilterForm (Filters tab
+# na zozname Device) — párovací DeviceFilterSet.declared_filters (.filtersets)
+# potrebuje aj samotné UI pole, inak sa v „Filters" tabe vôbec neobjaví.
+# NetBox Form triedy (na rozdiel od FilterSetov) zbierajú polia cez metaclass
+# LEN pri definícii triedy (`base_fields` sa nečíta nanovo pri inštancii) —
+# priame nastavenie atribútu na už definovanú triedu by teda NEFUNGOVALO,
+# treba mutovať `base_fields` dict priamo (overené naživo — funguje pre
+# všetky inštancie vytvorené PO tejto mutácii, teda pri štarte NetBoxu).
+# Rovnaký vzor a presne rovnaké choices ako natívne `has_primary_ip` pole
+# na tom istom formulári (dcim/forms/filtersets.py).
+DeviceFilterForm.base_fields['zabbix_matched'] = forms.NullBooleanField(
+    required=False,
+    label='Spárované so Zabbixom',
+    widget=forms.Select(choices=BOOLEAN_WITH_BLANK_CHOICES),
+)
+DeviceFilterForm.fieldsets = DeviceFilterForm.fieldsets + (
+    FieldSet('zabbix_matched', name='Zabbix'),
+)
