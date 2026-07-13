@@ -234,6 +234,14 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   rozšírenie core tabuliek pluginmi), nie prepisovaním `dcim.tables.DeviceTable`.
   Default skrytý (mimo nášho pluginu je, čo NetBox zobrazuje defaultne na
   vlastnej core tabuľke) — zapneš cez „Configure Table" na zozname Device.
+  Dá sa aj triediť (kliknutím na hlavičku) a filtrovať (nové pole „Spárované
+  so Zabbixom" v „Filters" tabe zoznamu Device) — obe cez bezpečný `Exists()`
+  korelovaný subquery, nie priamy join na reverse FK vzťah (ten by pri
+  zariadení s viacerými ZabbixHost záznamami — v tomto prostredí sa to reálne
+  stáva — duplikoval riadky zariadenia vo výsledku). NetBox nemá oficiálne
+  API na pridanie filtra do core FilterSetu (na rozdiel od stĺpcov), preto
+  ide o priame rozšírenie `dcim.filtersets.DeviceFilterSet`/
+  `dcim.forms.filtersets.DeviceFilterForm` z pluginu.
 - **Oprava: zaseknutý sync job sa teraz sám vyrieši** — periodický „Zabbix sync"
   naplánuje ďalší beh AŽ PO dobehnutí/zlyhaní toho aktuálneho
   (`core.jobs.JobRunner.handle`) — ak sa beh niekedy zasekne (napr. visiace
