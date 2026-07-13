@@ -227,6 +227,12 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 ## Changelog
 
 ### Unreleased
+- **Stĺpec „Zabbix" v natívnom NetBox zozname Device** — badge „Spárované"
+  (klikateľný na príslušný Zabbix host v NetBoxe) alebo „Nespárované". Pridané
+  cez `utilities.tables.register_table_column()` (oficiálne NetBox API na
+  rozšírenie core tabuliek pluginmi), nie prepisovaním `dcim.tables.DeviceTable`.
+  Default skrytý (mimo nášho pluginu je, čo NetBox zobrazuje defaultne na
+  vlastnej core tabuľke) — zapneš cez „Configure Table" na zozname Device.
 - **Oprava: zaseknutý sync job sa teraz sám vyrieši** — periodický „Zabbix sync"
   naplánuje ďalší beh AŽ PO dobehnutí/zlyhaní toho aktuálneho
   (`core.jobs.JobRunner.handle`) — ak sa beh niekedy zasekne (napr. visiace
