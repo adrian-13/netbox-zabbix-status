@@ -1,6 +1,8 @@
 import django_tables2 as tables
 
+from dcim.tables import DeviceTable
 from netbox.tables import NetBoxTable, columns
+from utilities.tables import register_table_column
 
 from .models import ZabbixHost, ZabbixProblem
 from .zabbix import get_setting
@@ -140,3 +142,36 @@ class ZabbixProblemTable(NetBoxTable):
             'site', 'acknowledged', 'suppressed', 'started', 'opdata', 'zabbix_link',
         )
         default_columns = _PROBLEM_DEFAULT_COLUMNS
+
+
+DEVICE_ZABBIX_STATUS = """
+{% with zh=value.first %}
+  {% if zh %}
+    <a href="{{ zh.get_absolute_url }}" class="badge text-bg-success text-decoration-none"
+       title="Spárované so Zabbix hostom {{ zh }}">
+      <i class="mdi mdi-check-circle-outline"></i> Spárované
+    </a>
+  {% else %}
+    <span class="badge text-bg-secondary" title="Nespárované so Zabbixom">
+      <i class="mdi mdi-close-circle-outline"></i> Nespárované
+    </span>
+  {% endif %}
+{% endwith %}
+"""
+
+# Pridá stĺpec „Zabbix" do natívnej NetBox tabuľky Device (nie len do
+# vlastných tabuliek pluginu) — oficiálne sanktovaný spôsob rozšírenia
+# core tabuliek pre pluginy (utilities.tables.register_table_column,
+# NetBox docs „Extending Core Tables"). Stĺpec je len PRIDANÝ do ponuky,
+# default skrytý (default_columns na DeviceTable je mimo nášho pluginu) —
+# používateľ si ho zapne cez „Configure Table".
+register_table_column(
+    tables.TemplateColumn(
+        template_code=DEVICE_ZABBIX_STATUS,
+        accessor='zabbix_hosts',
+        verbose_name='Zabbix',
+        orderable=False,
+    ),
+    'zabbix_status',
+    DeviceTable,
+)
