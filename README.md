@@ -227,8 +227,9 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 ## Changelog
 
 ### Unreleased
-- **Stĺpec „Zabbix" v natívnom NetBox zozname Device** — badge „Spárované"
-  (klikateľný na príslušný Zabbix host v NetBoxe) alebo „Nespárované". Pridané
+- **Stĺpec „Zabbix" v natívnom NetBox zozname Device** — ikona (zelený fajka
+  = spárované, klikateľná na príslušný Zabbix host v NetBoxe; šedý krížik =
+  nespárované), bez textu kvôli úspore miesta. Pridané
   cez `utilities.tables.register_table_column()` (oficiálne NetBox API na
   rozšírenie core tabuliek pluginmi), nie prepisovaním `dcim.tables.DeviceTable`.
   Default skrytý (mimo nášho pluginu je, čo NetBox zobrazuje defaultne na
