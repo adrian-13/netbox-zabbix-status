@@ -147,13 +147,13 @@ class ZabbixProblemTable(NetBoxTable):
 DEVICE_ZABBIX_STATUS = """
 {% with zh=value.first %}
   {% if zh %}
-    <a href="{{ zh.get_absolute_url }}" class="badge text-bg-success text-decoration-none"
+    <a href="{{ zh.get_absolute_url }}" class="text-success" aria-label="Spárované so Zabbix hostom {{ zh }}"
        title="Spárované so Zabbix hostom {{ zh }}">
-      <i class="mdi mdi-check-circle-outline"></i> Spárované
+      <i class="mdi mdi-check-circle-outline"></i>
     </a>
   {% else %}
-    <span class="badge text-bg-secondary" title="Nespárované so Zabbixom">
-      <i class="mdi mdi-close-circle-outline"></i> Nespárované
+    <span class="text-muted" aria-label="Nespárované so Zabbixom" title="Nespárované so Zabbixom">
+      <i class="mdi mdi-close-circle-outline"></i>
     </span>
   {% endif %}
 {% endwith %}
