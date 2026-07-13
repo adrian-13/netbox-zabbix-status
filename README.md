@@ -227,6 +227,19 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 ## Changelog
 
 ### Unreleased
+- **Oprava: zaseknutý sync job sa teraz sám vyrieši** — periodický „Zabbix sync"
+  naplánuje ďalší beh AŽ PO dobehnutí/zlyhaní toho aktuálneho
+  (`core.jobs.JobRunner.handle`) — ak sa beh niekedy zasekne (napr. visiace
+  Zabbix API pri sieťovom probléme) bez časového limitu, žiadny ďalší sync sa
+  už nikdy nenaplánuje (presne toto sa stalo — 9 hodín bez syncu, treba bolo
+  ručne zmazať job a spustiť ručné obnovenie). `ZabbixSyncJob` má teraz
+  explicitný `job_timeout=120s` (predtým platil len tichý NetBoxov globálny
+  default 300s, mimo kontroly pluginu) — zaseknutý beh sa zabije do 2 minút
+  a ďalší sync sa aj tak korektne naplánuje. Overené priamo cez rqworker
+  (dočasný test job), že RQ timeout skutočne preruší visiaci beh a
+  naplánovanie pokračuje ďalej. Existujúce upozornenie na dashboarde
+  („Dáta môžu byť neaktuálne") zostáva ako druhá poistka pre prípad zlyhania
+  mimo jedného behu (napr. pád workera).
 - **Oprava: sync už nezapĺňa globálny NetBox Changelog** — `ZabbixHost`/
   `ZabbixProblem` sú `NetBoxModel`, takže každé prepísanie počas syncu
   (`last_synced`, `problem_count`, availability...) sa logovalo ako
