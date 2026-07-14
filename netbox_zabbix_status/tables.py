@@ -4,6 +4,7 @@ from django.db.models import Exists, OuterRef
 from dcim.tables import DeviceTable
 from netbox.tables import NetBoxTable, columns
 from utilities.tables import register_table_column
+from virtualization.tables import VirtualMachineTable
 
 from .models import ZabbixHost, ZabbixProblem
 from .zabbix import get_setting
@@ -145,7 +146,7 @@ class ZabbixProblemTable(NetBoxTable):
         default_columns = _PROBLEM_DEFAULT_COLUMNS
 
 
-DEVICE_ZABBIX_STATUS = """
+ZABBIX_STATUS_BADGE = """
 {% with zh=value.first %}
   {% if zh %}
     <a href="{{ zh.get_absolute_url }}" class="text-success" aria-label="Spárované so Zabbix hostom {{ zh }}"
@@ -170,7 +171,7 @@ DEVICE_ZABBIX_STATUS = """
 # DeviceFilterSet/DeviceFilterForm, žiadne oficiálne API naň nie je.
 register_table_column(
     tables.TemplateColumn(
-        template_code=DEVICE_ZABBIX_STATUS,
+        template_code=ZABBIX_STATUS_BADGE,
         accessor='zabbix_hosts',
         verbose_name='Zabbix',
         orderable=True,
@@ -200,3 +201,31 @@ def _order_zabbix_status(self, queryset, is_descending):
 
 
 DeviceTable.order_zabbix_status = _order_zabbix_status
+
+
+# Rovnaký vzor ako vyššie pre Device — natívny zoznam Virtual Machines
+# dostáva identický stĺpec „Zabbix". Šablóna ZABBIX_STATUS_BADGE je
+# generická (len value.first/get_absolute_url, nič device-špecifické),
+# dá sa použiť nezmenená pre obe tabuľky.
+register_table_column(
+    tables.TemplateColumn(
+        template_code=ZABBIX_STATUS_BADGE,
+        accessor='zabbix_hosts',
+        verbose_name='Zabbix',
+        orderable=True,
+    ),
+    'zabbix_status',
+    VirtualMachineTable,
+)
+
+
+def _order_zabbix_status_vm(self, queryset, is_descending):
+    """Rovnaká Exists() logika ako `_order_zabbix_status` vyššie (pozri tam
+    pre plné odôvodnenie), len na `virtual_machine` FK namiesto `device`."""
+    queryset = queryset.annotate(
+        _zabbix_matched=Exists(ZabbixHost.objects.filter(virtual_machine=OuterRef('pk')))
+    ).order_by(('-' if is_descending else '') + '_zabbix_matched')
+    return queryset, True
+
+
+VirtualMachineTable.order_zabbix_status = _order_zabbix_status_vm

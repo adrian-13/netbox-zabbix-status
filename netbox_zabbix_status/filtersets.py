@@ -5,6 +5,7 @@ from dcim.filtersets import DeviceFilterSet
 from dcim.models import Device, DeviceRole, Site
 from netbox.filtersets import NetBoxModelFilterSet
 from tenancy.models import Tenant
+from virtualization.filtersets import VirtualMachineFilterSet
 from virtualization.models import VirtualMachine
 
 from .choices import (
@@ -161,5 +162,21 @@ def _filter_device_zabbix_matched(queryset, name, value):
 # Zodpovedajúce pole vo FilterForme je vo .forms (rovnaké meno 'zabbix_matched').
 DeviceFilterSet.declared_filters['zabbix_matched'] = django_filters.BooleanFilter(
     method=_filter_device_zabbix_matched,
+    label='Spárované so Zabbixom',
+)
+
+
+def _filter_vm_zabbix_matched(queryset, name, value):
+    """Rovnaká `Exists()` logika ako `_filter_device_zabbix_matched`
+    vyššie, len na `virtual_machine` FK namiesto `device`."""
+    condition = Exists(ZabbixHost.objects.filter(virtual_machine=OuterRef('pk')))
+    return queryset.filter(condition) if value else queryset.exclude(condition)
+
+
+# Rovnaký vzor ako DeviceFilterSet vyššie — natívny VirtualMachineFilterSet
+# dostáva identický filter „zabbix_matched". Zodpovedajúce pole vo FilterForme
+# je v .forms (rovnaké meno 'zabbix_matched').
+VirtualMachineFilterSet.declared_filters['zabbix_matched'] = django_filters.BooleanFilter(
+    method=_filter_vm_zabbix_matched,
     label='Spárované so Zabbixom',
 )

@@ -227,6 +227,14 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 ## Changelog
 
 ### Unreleased
+- **Stĺpec „Zabbix" a filter „Spárované so Zabbixom" aj na natívnom zozname
+  Virtual Machines** — rovnaká funkcia ako na natívnom zozname Device (v0.4.0):
+  ikona (zelený fajka = spárované, klikateľná na Zabbix hosta; šedý krížik =
+  nespárované), triediteľná cez vlastnú `Exists()` subquery logiku (nie
+  priamy `.order_by()`/`.filter()` na reverse FK — pri VM s viacerými
+  ZabbixHost záznamami by to duplikovalo riadky rovnako ako pri Device) a
+  filter „Spárované so Zabbixom" vo Filters tabe. Default skrytý stĺpec,
+  zapneš cez „Configure Table".
 - **Zápis NetBox identifikátorov späť do Zabbixu pri importe (Device aj VM)** —
   po vytvorení zariadenia alebo virtuálneho stroja cez import (tlačidlo „+")
   sa do Zabbix hosta zapíšu tagy s ID zodpovedajúceho NetBox objektu:

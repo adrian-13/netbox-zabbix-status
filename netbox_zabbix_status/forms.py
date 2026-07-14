@@ -7,6 +7,7 @@ from tenancy.models import Tenant
 from utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
 from utilities.forms.fields import DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from utilities.forms.rendering import FieldSet
+from virtualization.forms.filtersets import VirtualMachineFilterForm
 from virtualization.models import VirtualMachine
 
 from .choices import MatchMethodChoices, SeverityChoices, ZabbixHostStatusChoices
@@ -161,5 +162,17 @@ DeviceFilterForm.base_fields['zabbix_matched'] = forms.NullBooleanField(
     widget=forms.Select(choices=BOOLEAN_WITH_BLANK_CHOICES),
 )
 DeviceFilterForm.fieldsets = DeviceFilterForm.fieldsets + (
+    FieldSet('zabbix_matched', name='Zabbix'),
+)
+
+
+# Rovnaký vzor ako DeviceFilterForm vyššie — pole pre filter „zabbix_matched"
+# na natívnom VirtualMachineFilterForm (Filters tab na zozname Virtual Machines).
+VirtualMachineFilterForm.base_fields['zabbix_matched'] = forms.NullBooleanField(
+    required=False,
+    label='Spárované so Zabbixom',
+    widget=forms.Select(choices=BOOLEAN_WITH_BLANK_CHOICES),
+)
+VirtualMachineFilterForm.fieldsets = VirtualMachineFilterForm.fieldsets + (
     FieldSet('zabbix_matched', name='Zabbix'),
 )
