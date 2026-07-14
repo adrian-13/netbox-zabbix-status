@@ -226,7 +226,7 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 
 ## Changelog
 
-### Unreleased
+### v0.5.0
 - **Stĺpec „Zabbix" a filter „Spárované so Zabbixom" aj na natívnom zozname
   Virtual Machines** — rovnaká funkcia ako na natívnom zozname Device (v0.4.0):
   ikona (zelený fajka = spárované, klikateľná na Zabbix hosta; šedý krížik =
