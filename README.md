@@ -227,20 +227,22 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 ## Changelog
 
 ### Unreleased
-- **Zápis NetBox identifikátorov späť do Zabbixu pri importe** — po vytvorení
-  zariadenia cez import (tlačidlo „+") sa do Zabbix hosta zapíšu tagy
-  `nbx_siteid`/`nbx_deviceid`/`nbx_rackid` s ID zodpovedajúcich NetBox
-  objektov (`nbx_siteid` používa rovnaký, konfigurovateľný kľúč ako pri
-  čítaní — `ZabbixConfiguration.site_id_tag_key`). Existujúci tag sa
-  prepíše, chýbajúci sa pridá; ostatné tagy hosta (napr. `class`, `vendor`)
-  ostávajú nedotknuté. `nbx_rackid` sa vynechá, ak zariadenie nemá priradený
-  rack. JEDINÉ miesto v pluginu, ktoré do Zabbixu zapisuje — inde je plugin
-  výhradne read-only. Zlyhanie zápisu (napr. sieť, oprávnenia) nezablokuje
-  ani nevráti už vytvorené zariadenie v NetBoxe, len sa zobrazí varovanie.
+- **Zápis NetBox identifikátorov späť do Zabbixu pri importe (Device aj VM)** —
+  po vytvorení zariadenia alebo virtuálneho stroja cez import (tlačidlo „+")
+  sa do Zabbix hosta zapíšu tagy s ID zodpovedajúceho NetBox objektu:
+  `nbx_siteid` (oba typy, rovnaký konfigurovateľný kľúč ako pri čítaní —
+  `ZabbixConfiguration.site_id_tag_key`), `nbx_deviceid`+`nbx_rackid`
+  (len Device), `nbx_vmid` (len VM). Existujúci tag sa prepíše, chýbajúci sa
+  pridá; ostatné tagy hosta (napr. `class`, `vendor`) ostávajú nedotknuté.
+  `nbx_rackid` sa vynechá, ak zariadenie nemá priradený rack; pre VM sa
+  nezapisuje vôbec (rack ako koncept na VM neexistuje). JEDINÉ miesto v
+  pluginu, ktoré do Zabbixu zapisuje — inde je plugin výhradne read-only.
+  Zlyhanie zápisu (napr. sieť, oprávnenia) nezablokuje ani nevráti už
+  vytvorený objekt v NetBoxe, len sa zobrazí varovanie.
 - **Tlačidlo „Odstrániť Zabbix tagy" na detaile Zabbix hosta** — inverzná
   operácia k vyššie, cez NetBox modálne okno (nie JS `confirm()`): zoznam
   checkboxov s tagmi hosta, ktoré plugin vie zapisovať (`nbx_siteid`/
-  `nbx_deviceid`/`nbx_rackid`, aj keby ich reálne nastavila iná integrácia),
+  `nbx_deviceid`/`nbx_rackid`/`nbx_vmid`, aj keby ich reálne nastavila iná integrácia),
   všetky defaultne zaškrtnuté — odškrtnutím vyberieš, ktoré ostanú. Zoznam
   sa načíta live priamo zo Zabbix API (nie zo starého DB snapshotu), takže
   aj tagy zapísané tesne predtým tým istým importom sa hneď ponúknu na
@@ -248,8 +250,8 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   takýto tag alebo používateľ nemá oprávnenie „Edit". Odstránia sa len
   vybrané tagy (aj pri neúplnom výbere), ostatné tagy hosta (`class`,
   `vendor`, ...) ostávajú nedotknuté; odoslanie bez výberu nič nezmení.
-  Server-side vždy prefiltruje odoslané kľúče len na tie tri spravované —
-  aj pri ručne upravenom POST sa nedá odstrániť nič mimo nich.
+  Server-side vždy prefiltruje odoslané kľúče len na spravovanú množinu —
+  aj pri ručne upravenom POST sa nedá odstrániť nič mimo nej.
 
 ### v0.4.0
 - **Stĺpec „Zabbix" v natívnom NetBox zozname Device** — ikona (zelený fajka

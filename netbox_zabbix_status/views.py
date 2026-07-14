@@ -48,9 +48,11 @@ SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
 
 # Zabbix host tag kľúče, ktoré import zapisuje späť do Zabbixu (nbx_siteid
 # má vlastné, konfigurovateľné meno v ZabbixConfiguration.site_id_tag_key —
-# tieto dva nie, keďže pre ne zatiaľ nastavenie nebolo vyžiadané)
+# tieto tri nie, keďže pre ne zatiaľ nastavenie nebolo vyžiadané). Rack sa
+# aplikuje len pri importe ako Device — VirtualMachine rack nemá.
 DEVICE_ID_TAG_KEY = 'nbx_deviceid'
 RACK_ID_TAG_KEY = 'nbx_rackid'
+VM_ID_TAG_KEY = 'nbx_vmid'
 
 # História problémov na device tabe: rýchle voliteľné rozsahy + vlastný rozsah.
 # Filtrované podľa času VZNIKU problému (nie prekrytia s oknom) — jednoduchá,
@@ -723,7 +725,7 @@ def _managed_zabbix_tag_keys():
     (ZabbixHostRemoveTagsView) — jedno miesto pravdy pre obe strany, aby sa
     nedali rozísť (napr. pri zmene site_id_tag_key v Nastaveniach). Prázdny
     site_id_tag_key (funkcia vypnutá) sa jednoducho vynechá zo setu."""
-    keys = {DEVICE_ID_TAG_KEY, RACK_ID_TAG_KEY}
+    keys = {DEVICE_ID_TAG_KEY, RACK_ID_TAG_KEY, VM_ID_TAG_KEY}
     site_tag_key = get_setting('site_id_tag_key', 'nbx_siteid')
     if site_tag_key:
         keys.add(site_tag_key)
@@ -783,37 +785,39 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         else:
             messages.success(request, f'Vytvorené: „{obj}".')
 
-        # Zariadenie už v NetBoxe existuje (commitnuté) — zápis späť do
+        # Zariadenie/VM už v NetBoxe existuje (commitnuté) — zápis späť do
         # Zabbixu je len doplnkový krok, jeho prípadné zlyhanie nesmie
-        # vrátiť/zablokovať už hotové vytvorenie. Len Device (nie VM —
-        # rack sa na VM nedá aplikovať, viď _update_zabbix_tags).
-        if kind == 'device':
-            self._update_zabbix_tags(request, host, obj)
+        # vrátiť/zablokovať už hotové vytvorenie.
+        self._update_zabbix_tags(request, host, obj, kind)
 
         return redirect(obj.get_absolute_url())
 
-    def _update_zabbix_tags(self, request, host, device):
+    def _update_zabbix_tags(self, request, host, obj, kind):
         """Po importe zapíše NetBox identifikátory späť do Zabbixu ako host
         tagy — opačný smer než `_site_from_tag()` (ktorý ich pri importe
         ČÍTA). Ak tag už existuje, hodnota sa PREPÍŠE; ak nie, PRIDÁ sa.
         Site tag kľúč je ten istý ako `site_id_tag_key` v Nastaveniach (aby
         write strana nevytvárala iný tag než z akého sa pri importe číta) —
         prázdny kľúč (funkcia vypnutá) = site tag sa nezapisuje vôbec.
-        `nbx_rackid` sa vynechá, ak zariadenie nemá priradený rack (nemá
-        zmysel tvrdiť hodnotu, ktorú nemáme)."""
+        Device navyše dostane `nbx_deviceid`+`nbx_rackid` (rack sa vynechá,
+        ak zariadenie nemá priradený rack); VM dostane `nbx_vmid` — rack tag
+        sa pre VM nezapisuje vôbec, VirtualMachine nemá rack ako koncept."""
         tag_values = {}
         site_tag_key = get_setting('site_id_tag_key', 'nbx_siteid')
         if site_tag_key:
-            tag_values[site_tag_key] = device.site_id
-        tag_values[DEVICE_ID_TAG_KEY] = device.pk
-        tag_values[RACK_ID_TAG_KEY] = device.rack_id
+            tag_values[site_tag_key] = obj.site_id
+        if kind == 'device':
+            tag_values[DEVICE_ID_TAG_KEY] = obj.pk
+            tag_values[RACK_ID_TAG_KEY] = obj.rack_id
+        else:
+            tag_values[VM_ID_TAG_KEY] = obj.pk
 
         try:
             update_host_tags(host.zabbix_hostid, tag_values)
         except Exception as e:
             messages.warning(
                 request,
-                f'Zariadenie bolo vytvorené, ale aktualizácia Zabbix tagov zlyhala: {e}',
+                f'Objekt bol vytvorený, ale aktualizácia Zabbix tagov zlyhala: {e}',
             )
 
     # -- zdieľané pomocné metódy --------------------------------------------
