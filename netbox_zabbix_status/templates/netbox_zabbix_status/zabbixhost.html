@@ -2,18 +2,53 @@
 {% load helpers %}
 
 {% block extra_controls %}
-  {% if perms.netbox_zabbix_status.change_zabbixhost %}
-    <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_remove_tags' pk=object.pk %}"
-          class="d-inline"
-          onsubmit="return confirm('Odstrániť Zabbix tagy (nbx_siteid/nbx_deviceid/nbx_rackid) z tohto hosta v Zabbixe?');">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-outline-danger"
-              title="Odstráni nbx_siteid/nbx_deviceid/nbx_rackid tagy priamo v Zabbixe">
-        <i class="mdi mdi-tag-remove"></i> Odstrániť Zabbix tagy
-      </button>
-    </form>
+  {% if perms.netbox_zabbix_status.change_zabbixhost and removable_zabbix_tags %}
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
+            data-bs-target="#zabbix-tags-remove-modal"
+            title="Odstráni vybrané tagy priamo v Zabbixe">
+      <i class="mdi mdi-tag-remove"></i> Odstrániť Zabbix tagy
+    </button>
   {% endif %}
 {% endblock %}
+
+{% block modals %}
+  {{ block.super }}
+  {% if perms.netbox_zabbix_status.change_zabbixhost and removable_zabbix_tags %}
+    <div class="modal fade" id="zabbix-tags-remove-modal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_remove_tags' pk=object.pk %}">
+            {% csrf_token %}
+            <div class="modal-header">
+              <h5 class="modal-title">Odstrániť Zabbix tagy</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavrieť"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted">
+                Vyber, ktoré tagy sa majú odstrániť priamo v Zabbixe (na hostovi
+                <code>{{ object.name }}</code>). Ostatné tagy hosta nebudú dotknuté.
+              </p>
+              {% for tag in removable_zabbix_tags %}
+                <label class="form-check mb-1">
+                  <input type="checkbox" class="form-check-input" name="tag_keys" value="{{ tag.key }}" checked>
+                  <span class="form-check-label">
+                    <code>{{ tag.key }}</code>{% if tag.value %}: {{ tag.value }}{% endif %}
+                  </span>
+                </label>
+              {% endfor %}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Zrušiť</button>
+              <button type="submit" class="btn btn-danger">
+                <i class="mdi mdi-tag-remove"></i> Odstrániť vybrané
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endblock modals %}
 
 {% block content %}
   <div class="row mb-3">

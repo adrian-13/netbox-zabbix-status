@@ -35,6 +35,7 @@ from .zabbix import (
     ZabbixConfigError,
     get_config,
     get_host_inventory,
+    get_host_tags,
     get_live_problems,
     get_problem_history,
     get_setting,
@@ -323,7 +324,25 @@ class ZabbixHostView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         # instance JE priamo Zabbix host (na rozdiel od ZabbixTabView, kde sa
         # host hľadá cez Device/VM) — zdieľaná funkcia s tab-om na Device/VM.
-        return _build_history_context(request, instance)
+        context = _build_history_context(request, instance)
+
+        # Len pre používateľov, ktorí by aj tak videli tlačidlo/modál —
+        # netreba zbytočný live Zabbix dopyt pre nikoho iného
+        if request.user.has_perm('netbox_zabbix_status.change_zabbixhost'):
+            managed = _managed_zabbix_tag_keys()
+            try:
+                current = get_host_tags(instance.zabbix_hostid)
+            except Exception:
+                current = []
+            context['removable_zabbix_tags'] = [
+                {'key': t['tag'], 'value': t.get('value', '')}
+                for t in current
+                if t.get('tag') in managed
+            ]
+        else:
+            context['removable_zabbix_tags'] = []
+
+        return context
 
 
 @register_model_view(ZabbixProblem, 'list', path='', detail=False)
@@ -582,24 +601,33 @@ class ZabbixHostEditView(generic.ObjectEditView):
 
 
 class ZabbixHostRemoveTagsView(PermissionRequiredMixin, View):
-    """Tlačidlo „Odstrániť Zabbix tagy" na detaile Zabbix hosta — inverzná
-    operácia k ZabbixHostImportView._update_zabbix_tags(). Odstráni presne
-    tie tagy (_managed_zabbix_tag_keys — nbx_siteid/nbx_deviceid/nbx_rackid),
-    ktoré import zapísal; ostatné tagy hosta (z inej integrácie a pod.)
-    nedotkne. Rovnaké oprávnenie ako „Edit" (ručné párovanie) na tom istom
-    objekte — obe menia stav ZabbixHosta, len jedna smerom do NetBoxu
-    a druhá smerom do Zabbixu."""
+    """Modálne okno „Odstrániť Zabbix tagy" na detaile Zabbix hosta —
+    inverzná operácia k ZabbixHostImportView._update_zabbix_tags(). Odstráni
+    LEN zaškrtnuté tagy (checkboxy v modáli, default všetky zaškrtnuté —
+    viď ZabbixHostView.get_extra_context/removable_zabbix_tags), nikdy nič
+    mimo _managed_zabbix_tag_keys() (aj keby niekto POST dáta upravil ručne).
+    Rovnaké oprávnenie ako „Edit" (ručné párovanie) na tom istom objekte —
+    obe menia stav ZabbixHosta, len jedna smerom do NetBoxu a druhá smerom
+    do Zabbixu."""
 
     permission_required = 'netbox_zabbix_status.change_zabbixhost'
 
     def post(self, request, pk):
         host = get_object_or_404(ZabbixHost, pk=pk)
+        selected = set(request.POST.getlist('tag_keys')) & _managed_zabbix_tag_keys()
+
+        if not selected:
+            messages.info(request, 'Nebol vybraný žiadny tag na odstránenie.')
+            return redirect(host.get_absolute_url())
+
         try:
-            remove_host_tags(host.zabbix_hostid, _managed_zabbix_tag_keys())
+            remove_host_tags(host.zabbix_hostid, selected)
         except Exception as e:
             messages.error(request, f'Odstránenie Zabbix tagov zlyhalo: {e}')
         else:
-            messages.success(request, 'Zabbix tagy (Site/Device/Rack ID) boli odstránené.')
+            messages.success(
+                request, f'Odstránené tagy v Zabbixe: {", ".join(sorted(selected))}.'
+            )
         return redirect(host.get_absolute_url())
 
 

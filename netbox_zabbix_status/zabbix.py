@@ -108,6 +108,29 @@ def get_host_inventory(hostid: int) -> dict:
     return inventory
 
 
+def _host_tags_cache_key(hostid):
+    return f'{PLUGIN_NAME}:tags:{hostid}'
+
+
+def get_host_tags(hostid: int) -> list:
+    """Aktuálne Zabbix host tagy, priamo z API — krátka cache (cache_ttl),
+    pre ZOBRAZENIE (napr. checkbox zoznam v modálnom okne na odstránenie
+    tagov na detaile hosta). `update_host_tags()`/`remove_host_tags()` si
+    tento cache po zápise/zmazaní invalidujú, aby ďalšie zobrazenie stránky
+    hneď odrážalo aktuálny stav, nemuselo čakať cache_ttl sekúnd na hodnoty,
+    ktoré si plugin sám práve zapísal."""
+    cache_key = _host_tags_cache_key(hostid)
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    api = get_client()
+    hosts = api.host.get(hostids=[hostid], output=[], selectTags='extend')
+    tags = (hosts[0].get('tags') or []) if hosts else []
+    cache.set(cache_key, tags, int(get_setting('cache_ttl', 30)))
+    return tags
+
+
 def update_host_tags(hostid: int, tag_values: dict) -> None:
     """Aktualizuje/vytvorí Zabbix host tagy podľa NetBox objektu — JEDINÉ
     miesto v pluginu, ktoré DO Zabbixu zapisuje (všade inde je plugin
@@ -121,7 +144,9 @@ def update_host_tags(hostid: int, tag_values: dict) -> None:
     ostatné tagy hosta (napr. `class`, `vendor` z inej integrácie) ostávajú
     nedotknuté — `host.update` v Zabbix API nahrádza CELÉ pole tagov naraz,
     preto treba najprv dotiahnuť aktuálny stav a zlúčiť, nie len poslať tri
-    nové tagy samotné."""
+    nové tagy samotné. NEČÍTA cez get_host_tags() (cache) — zápis musí
+    vychádzať z čerstvého stavu, inak by mohol prepísať medzičasom pridaný
+    tag hodnotou zo starej cache."""
     api = get_client()
     hosts = api.host.get(hostids=[hostid], output=[], selectTags='extend')
     if not hosts:
@@ -137,12 +162,13 @@ def update_host_tags(hostid: int, tag_values: dict) -> None:
 
     new_tags = [{'tag': k, 'value': v} for k, v in current.items()]
     api.host.update(hostid=hostid, tags=new_tags)
+    cache.delete(_host_tags_cache_key(hostid))
 
 
 def remove_host_tags(hostid: int, tag_keys) -> None:
     """Inverzná operácia k `update_host_tags()` — odstráni zo Zabbix hosta
-    len tagy s kľúčom v `tag_keys` (napr. `{'nbx_siteid', 'nbx_deviceid',
-    'nbx_rackid'}`), ostatné tagy hosta (`class`, `vendor`, čokoľvek
+    len tagy s kľúčom v `tag_keys` (napr. tie, čo si používateľ zaškrtol
+    v modálnom okne), ostatné tagy hosta (`class`, `vendor`, čokoľvek
     nesúvisiace) ostávajú nedotknuté. Volá sa z tlačidla „Odstrániť Zabbix
     tagy" na detaile Zabbix hosta (views.ZabbixHostRemoveTagsView)."""
     api = get_client()
@@ -156,6 +182,7 @@ def remove_host_tags(hostid: int, tag_keys) -> None:
         if t['tag'] not in tag_keys
     ]
     api.host.update(hostid=hostid, tags=remaining)
+    cache.delete(_host_tags_cache_key(hostid))
 
 
 def get_problem_history(hostid: int, time_from: int, time_till: int) -> list:
