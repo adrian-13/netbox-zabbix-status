@@ -238,9 +238,18 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
   výhradne read-only. Zlyhanie zápisu (napr. sieť, oprávnenia) nezablokuje
   ani nevráti už vytvorené zariadenie v NetBoxe, len sa zobrazí varovanie.
 - **Tlačidlo „Odstrániť Zabbix tagy" na detaile Zabbix hosta** — inverzná
-  operácia k vyššie: odstráni presne tie tri tagy (nie všetky tagy hosta),
-  s JS potvrdením pred odoslaním. Rovnaké oprávnenie ako „Edit" (ručné
-  párovanie) na tom istom hostovi.
+  operácia k vyššie, cez NetBox modálne okno (nie JS `confirm()`): zoznam
+  checkboxov s tagmi hosta, ktoré plugin vie zapisovať (`nbx_siteid`/
+  `nbx_deviceid`/`nbx_rackid`, aj keby ich reálne nastavila iná integrácia),
+  všetky defaultne zaškrtnuté — odškrtnutím vyberieš, ktoré ostanú. Zoznam
+  sa načíta live priamo zo Zabbix API (nie zo starého DB snapshotu), takže
+  aj tagy zapísané tesne predtým tým istým importom sa hneď ponúknu na
+  odstránenie. Tlačidlo aj modál sa vôbec nezobrazia, ak host nemá žiadny
+  takýto tag alebo používateľ nemá oprávnenie „Edit". Odstránia sa len
+  vybrané tagy (aj pri neúplnom výbere), ostatné tagy hosta (`class`,
+  `vendor`, ...) ostávajú nedotknuté; odoslanie bez výberu nič nezmení.
+  Server-side vždy prefiltruje odoslané kľúče len na tie tri spravované —
+  aj pri ručne upravenom POST sa nedá odstrániť nič mimo nich.
 
 ### v0.4.0
 - **Stĺpec „Zabbix" v natívnom NetBox zozname Device** — ikona (zelený fajka
