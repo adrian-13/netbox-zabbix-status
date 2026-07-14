@@ -39,9 +39,17 @@ from .zabbix import (
     get_problem_history,
     get_setting,
     get_web_url,
+    remove_host_tags,
+    update_host_tags,
 )
 
 SEVERITY_LABELS = dict(SeverityChoices.CHOICES)
+
+# Zabbix host tag kľúče, ktoré import zapisuje späť do Zabbixu (nbx_siteid
+# má vlastné, konfigurovateľné meno v ZabbixConfiguration.site_id_tag_key —
+# tieto dva nie, keďže pre ne zatiaľ nastavenie nebolo vyžiadané)
+DEVICE_ID_TAG_KEY = 'nbx_deviceid'
+RACK_ID_TAG_KEY = 'nbx_rackid'
 
 # História problémov na device tabe: rýchle voliteľné rozsahy + vlastný rozsah.
 # Filtrované podľa času VZNIKU problému (nie prekrytia s oknom) — jednoduchá,
@@ -573,6 +581,28 @@ class ZabbixHostEditView(generic.ObjectEditView):
     form = ZabbixHostAssignForm
 
 
+class ZabbixHostRemoveTagsView(PermissionRequiredMixin, View):
+    """Tlačidlo „Odstrániť Zabbix tagy" na detaile Zabbix hosta — inverzná
+    operácia k ZabbixHostImportView._update_zabbix_tags(). Odstráni presne
+    tie tagy (_managed_zabbix_tag_keys — nbx_siteid/nbx_deviceid/nbx_rackid),
+    ktoré import zapísal; ostatné tagy hosta (z inej integrácie a pod.)
+    nedotkne. Rovnaké oprávnenie ako „Edit" (ručné párovanie) na tom istom
+    objekte — obe menia stav ZabbixHosta, len jedna smerom do NetBoxu
+    a druhá smerom do Zabbixu."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixhost'
+
+    def post(self, request, pk):
+        host = get_object_or_404(ZabbixHost, pk=pk)
+        try:
+            remove_host_tags(host.zabbix_hostid, _managed_zabbix_tag_keys())
+        except Exception as e:
+            messages.error(request, f'Odstránenie Zabbix tagov zlyhalo: {e}')
+        else:
+            messages.success(request, 'Zabbix tagy (Site/Device/Rack ID) boli odstránené.')
+        return redirect(host.get_absolute_url())
+
+
 #
 # Import nespárovaného hosta ako nové zariadenie/VM (M6)
 #
@@ -659,6 +689,19 @@ def _site_from_tag(tags, tag_key):
     return None
 
 
+def _managed_zabbix_tag_keys():
+    """Zabbix host tag kľúče, ktoré tento plugin zapisuje späť pri importe
+    (ZabbixHostImportView._update_zabbix_tags) a vie aj odstrániť
+    (ZabbixHostRemoveTagsView) — jedno miesto pravdy pre obe strany, aby sa
+    nedali rozísť (napr. pri zmene site_id_tag_key v Nastaveniach). Prázdny
+    site_id_tag_key (funkcia vypnutá) sa jednoducho vynechá zo setu."""
+    keys = {DEVICE_ID_TAG_KEY, RACK_ID_TAG_KEY}
+    site_tag_key = get_setting('site_id_tag_key', 'nbx_siteid')
+    if site_tag_key:
+        keys.add(site_tag_key)
+    return keys
+
+
 class ZabbixHostImportView(LoginRequiredMixin, View):
     """Vstupný bod pre ručný import nespárovaného Zabbix hosta do NetBoxu.
 
@@ -711,7 +754,39 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
             )
         else:
             messages.success(request, f'Vytvorené: „{obj}".')
+
+        # Zariadenie už v NetBoxe existuje (commitnuté) — zápis späť do
+        # Zabbixu je len doplnkový krok, jeho prípadné zlyhanie nesmie
+        # vrátiť/zablokovať už hotové vytvorenie. Len Device (nie VM —
+        # rack sa na VM nedá aplikovať, viď _update_zabbix_tags).
+        if kind == 'device':
+            self._update_zabbix_tags(request, host, obj)
+
         return redirect(obj.get_absolute_url())
+
+    def _update_zabbix_tags(self, request, host, device):
+        """Po importe zapíše NetBox identifikátory späť do Zabbixu ako host
+        tagy — opačný smer než `_site_from_tag()` (ktorý ich pri importe
+        ČÍTA). Ak tag už existuje, hodnota sa PREPÍŠE; ak nie, PRIDÁ sa.
+        Site tag kľúč je ten istý ako `site_id_tag_key` v Nastaveniach (aby
+        write strana nevytvárala iný tag než z akého sa pri importe číta) —
+        prázdny kľúč (funkcia vypnutá) = site tag sa nezapisuje vôbec.
+        `nbx_rackid` sa vynechá, ak zariadenie nemá priradený rack (nemá
+        zmysel tvrdiť hodnotu, ktorú nemáme)."""
+        tag_values = {}
+        site_tag_key = get_setting('site_id_tag_key', 'nbx_siteid')
+        if site_tag_key:
+            tag_values[site_tag_key] = device.site_id
+        tag_values[DEVICE_ID_TAG_KEY] = device.pk
+        tag_values[RACK_ID_TAG_KEY] = device.rack_id
+
+        try:
+            update_host_tags(host.zabbix_hostid, tag_values)
+        except Exception as e:
+            messages.warning(
+                request,
+                f'Zariadenie bolo vytvorené, ale aktualizácia Zabbix tagov zlyhala: {e}',
+            )
 
     # -- zdieľané pomocné metódy --------------------------------------------
 

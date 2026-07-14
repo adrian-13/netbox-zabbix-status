@@ -16,6 +16,7 @@ urlpatterns = [
     path('hosts/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost', detail=False))),
     path('hosts/visible-tags/', views.HostsVisibleTagsView.as_view(), name='hosts_visible_tags'),
     path('hosts/<int:pk>/import/', views.ZabbixHostImportView.as_view(), name='zabbixhost_import'),
+    path('hosts/<int:pk>/remove-tags/', views.ZabbixHostRemoveTagsView.as_view(), name='zabbixhost_remove_tags'),
     path('hosts/<int:pk>/', include(get_model_urls('netbox_zabbix_status', 'zabbixhost'))),
     path('problems/', include(get_model_urls('netbox_zabbix_status', 'zabbixproblem', detail=False))),
 ]

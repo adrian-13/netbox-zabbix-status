@@ -1,6 +1,20 @@
 {% extends 'generic/object.html' %}
 {% load helpers %}
 
+{% block extra_controls %}
+  {% if perms.netbox_zabbix_status.change_zabbixhost %}
+    <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_remove_tags' pk=object.pk %}"
+          class="d-inline"
+          onsubmit="return confirm('Odstrániť Zabbix tagy (nbx_siteid/nbx_deviceid/nbx_rackid) z tohto hosta v Zabbixe?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-danger"
+              title="Odstráni nbx_siteid/nbx_deviceid/nbx_rackid tagy priamo v Zabbixe">
+        <i class="mdi mdi-tag-remove"></i> Odstrániť Zabbix tagy
+      </button>
+    </form>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
   <div class="row mb-3">
     <div class="col col-12 col-xl-6">

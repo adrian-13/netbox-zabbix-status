@@ -108,6 +108,56 @@ def get_host_inventory(hostid: int) -> dict:
     return inventory
 
 
+def update_host_tags(hostid: int, tag_values: dict) -> None:
+    """Aktualizuje/vytvorí Zabbix host tagy podľa NetBox objektu — JEDINÉ
+    miesto v pluginu, ktoré DO Zabbixu zapisuje (všade inde je plugin
+    read-only voči Zabbixu, len číta). Volá sa len pri importe nespárovaného
+    hosta ako nové zariadenie (views.ZabbixHostImportView), nie pri
+    pravidelnom syncu.
+
+    tag_values: {tag_key: hodnota}. Kľúč s hodnotou None sa vynechá (napr.
+    zariadenie bez racku — nemá zmysel tvrdiť rackid, ktoré nemá). Existujúci
+    tag s rovnakým kľúčom sa PREPÍŠE na novú hodnotu, chýbajúci sa PRIDÁ;
+    ostatné tagy hosta (napr. `class`, `vendor` z inej integrácie) ostávajú
+    nedotknuté — `host.update` v Zabbix API nahrádza CELÉ pole tagov naraz,
+    preto treba najprv dotiahnuť aktuálny stav a zlúčiť, nie len poslať tri
+    nové tagy samotné."""
+    api = get_client()
+    hosts = api.host.get(hostids=[hostid], output=[], selectTags='extend')
+    if not hosts:
+        return
+
+    # Zabbix vráti aj 'automatic' pole (LLD/host prototyp pôvod tagu) —
+    # host.update ho ako vstupný parameter neakceptuje, treba ho zahodiť
+    current = {t['tag']: t['value'] for t in hosts[0].get('tags') or []}
+    for key, value in tag_values.items():
+        if value is None:
+            continue
+        current[key] = str(value)
+
+    new_tags = [{'tag': k, 'value': v} for k, v in current.items()]
+    api.host.update(hostid=hostid, tags=new_tags)
+
+
+def remove_host_tags(hostid: int, tag_keys) -> None:
+    """Inverzná operácia k `update_host_tags()` — odstráni zo Zabbix hosta
+    len tagy s kľúčom v `tag_keys` (napr. `{'nbx_siteid', 'nbx_deviceid',
+    'nbx_rackid'}`), ostatné tagy hosta (`class`, `vendor`, čokoľvek
+    nesúvisiace) ostávajú nedotknuté. Volá sa z tlačidla „Odstrániť Zabbix
+    tagy" na detaile Zabbix hosta (views.ZabbixHostRemoveTagsView)."""
+    api = get_client()
+    hosts = api.host.get(hostids=[hostid], output=[], selectTags='extend')
+    if not hosts:
+        return
+
+    remaining = [
+        {'tag': t['tag'], 'value': t['value']}
+        for t in (hosts[0].get('tags') or [])
+        if t['tag'] not in tag_keys
+    ]
+    api.host.update(hostid=hostid, tags=remaining)
+
+
 def get_problem_history(hostid: int, time_from: int, time_till: int) -> list:
     """História problémov hosta (aj vyriešených) vzniknutých v danom časovom
     okne, priamo zo Zabbix API — na rozdiel od aktívnych problémov sa nikde
