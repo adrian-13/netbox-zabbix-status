@@ -226,7 +226,7 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 
 ## Changelog
 
-### Unreleased
+### v0.4.0
 - **Stĺpec „Zabbix" v natívnom NetBox zozname Device** — ikona (zelený fajka
   = spárované, klikateľná na príslušný Zabbix host v NetBoxe; šedý krížik =
   nespárované), bez textu kvôli úspore miesta. Pridané

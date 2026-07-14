@@ -1,12 +1,12 @@
 from netbox.plugins import PluginConfig
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 
 class ZabbixStatusConfig(PluginConfig):
     name = 'netbox_zabbix_status'
     verbose_name = 'Zabbix Status'
-    description = 'Read-only zobrazenie stavu Zabbix monitoringu v NetBoxe'
+    description = 'Zobrazenie a import stavu Zabbix monitoringu v NetBoxe'
     version = __version__
     author = 'Adrián Javorček'
     author_email = 'adrian.javorcek@gmail.com'
