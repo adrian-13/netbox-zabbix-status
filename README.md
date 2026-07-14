@@ -226,6 +226,22 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 
 ## Changelog
 
+### Unreleased
+- **Zápis NetBox identifikátorov späť do Zabbixu pri importe** — po vytvorení
+  zariadenia cez import (tlačidlo „+") sa do Zabbix hosta zapíšu tagy
+  `nbx_siteid`/`nbx_deviceid`/`nbx_rackid` s ID zodpovedajúcich NetBox
+  objektov (`nbx_siteid` používa rovnaký, konfigurovateľný kľúč ako pri
+  čítaní — `ZabbixConfiguration.site_id_tag_key`). Existujúci tag sa
+  prepíše, chýbajúci sa pridá; ostatné tagy hosta (napr. `class`, `vendor`)
+  ostávajú nedotknuté. `nbx_rackid` sa vynechá, ak zariadenie nemá priradený
+  rack. JEDINÉ miesto v pluginu, ktoré do Zabbixu zapisuje — inde je plugin
+  výhradne read-only. Zlyhanie zápisu (napr. sieť, oprávnenia) nezablokuje
+  ani nevráti už vytvorené zariadenie v NetBoxe, len sa zobrazí varovanie.
+- **Tlačidlo „Odstrániť Zabbix tagy" na detaile Zabbix hosta** — inverzná
+  operácia k vyššie: odstráni presne tie tri tagy (nie všetky tagy hosta),
+  s JS potvrdením pred odoslaním. Rovnaké oprávnenie ako „Edit" (ručné
+  párovanie) na tom istom hostovi.
+
 ### v0.4.0
 - **Stĺpec „Zabbix" v natívnom NetBox zozname Device** — ikona (zelený fajka
   = spárované, klikateľná na príslušný Zabbix host v NetBoxe; šedý krížik =
