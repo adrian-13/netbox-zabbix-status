@@ -226,6 +226,31 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 
 ## Changelog
 
+### Unreleased
+- **Oprava: import zo Zabbixu teraz naozaj spáruje vytvorené zariadenie/VM
+  s hostom** — `ZabbixHostImportView` predtým vytvorilo Device/VM (aj zápis
+  tagov späť do Zabbixu), ale nikdy nenastavilo `ZabbixHost.device`/
+  `virtual_machine` na novo vytvorený objekt, takže host zostal v NetBoxe
+  „nespárovaný" až do najbližšieho periodického syncu (a aj vtedy len ak ho
+  automatické párovanie podľa mena/IP našlo). Teraz sa spárovanie
+  (`match_method=Manual`, sync ho už neprepíše) deje priamo v tej istej
+  transakcii ako vytvorenie Device/VM — zlyhanie ktoréhokoľvek neskoršieho
+  kroku (interface, IP) vráti späť aj spárovanie, nič neostane v
+  polovičnom stave.
+- **Tlačidlo „Vygenerovať Zabbix tagy" na detaile Zabbix hosta** — znovu
+  zapíše spravované tagy (`nbx_siteid`/`nbx_deviceid`/`nbx_rackid` alebo
+  `nbx_vmid`) podľa aktuálneho stavu spárovaného Device/VM, rovnakou
+  logikou ako pri prvotnom importe. Rieši prípad, keď boli tagy odstránené
+  tlačidlom „Odstrániť Zabbix tagy" (alebo priamo v Zabbixe) a treba ich
+  bez opakovaného importu obnoviť. Viditeľné len pri spárovanom hostovi.
+- **Tlačidlo „Pridať vlastný tag" na detaile Zabbix hosta** — modálne okno
+  na zápis ĽUBOVOĽNÉHO tagu (kľúč+hodnota) priamo do Zabbixu, nad rámec
+  tých, čo plugin spravuje automaticky. Kľúč zhodný so spravovaným tagom
+  (`nbx_siteid` a pod.) je zámerne odmietnutý — tie sa menia výhradne cez
+  „Vygenerovať"/„Odstrániť", aby si obe cesty ticho neprepisovali hodnoty.
+  Funguje aj na nespárovanom hostovi. Detail hosta teraz zobrazuje aj
+  zoznam aktuálnych Zabbix tagov (rovnaké odznaky ako v zozname Hostov).
+
 ### v0.5.0
 - **Stĺpec „Zabbix" a filter „Spárované so Zabbixom" aj na natívnom zozname
   Virtual Machines** — rovnaká funkcia ako na natívnom zozname Device (v0.4.0):

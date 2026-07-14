@@ -133,10 +133,12 @@ def get_host_tags(hostid: int) -> list:
 
 def update_host_tags(hostid: int, tag_values: dict) -> None:
     """Aktualizuje/vytvorí Zabbix host tagy podľa NetBox objektu — JEDINÉ
-    miesto v pluginu, ktoré DO Zabbixu zapisuje (všade inde je plugin
-    read-only voči Zabbixu, len číta). Volá sa len pri importe nespárovaného
-    hosta ako nové zariadenie (views.ZabbixHostImportView), nie pri
-    pravidelnom syncu.
+    miesto v pluginu (spolu s `remove_host_tags`), ktoré DO Zabbixu zapisuje
+    (všade inde je plugin read-only voči Zabbixu, len číta). Volá sa pri
+    importe nespárovaného hosta ako nové zariadenie/VM (views.ZabbixHostImportView),
+    pri opätovnom vygenerovaní tagov už spárovaného hosta
+    (views.ZabbixHostRegenerateTagsView) a pri zápise vlastného tagu
+    (views.ZabbixHostAddCustomTagView) — nikdy pri pravidelnom syncu.
 
     tag_values: {tag_key: hodnota}. Kľúč s hodnotou None sa vynechá (napr.
     zariadenie bez racku — nemá zmysel tvrdiť rackid, ktoré nemá). Existujúci

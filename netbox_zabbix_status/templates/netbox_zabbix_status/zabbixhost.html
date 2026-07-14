@@ -2,6 +2,22 @@
 {% load helpers %}
 
 {% block extra_controls %}
+  {% if perms.netbox_zabbix_status.change_zabbixhost and can_regenerate_tags %}
+    <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_regenerate_tags' pk=object.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-success"
+              title="Znovu zapíše spravované tagy (nbx_siteid/nbx_deviceid/nbx_rackid alebo nbx_vmid) podľa aktuálneho stavu">
+        <i class="mdi mdi-tag-refresh"></i> Vygenerovať Zabbix tagy
+      </button>
+    </form>
+  {% endif %}
+  {% if perms.netbox_zabbix_status.change_zabbixhost %}
+    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+            data-bs-target="#zabbix-tag-add-modal"
+            title="Zapíše vlastný tag priamo do Zabbixu">
+      <i class="mdi mdi-tag-plus"></i> Pridať vlastný tag
+    </button>
+  {% endif %}
   {% if perms.netbox_zabbix_status.change_zabbixhost and removable_zabbix_tags %}
     <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
             data-bs-target="#zabbix-tags-remove-modal"
@@ -13,6 +29,42 @@
 
 {% block modals %}
   {{ block.super }}
+  {% if perms.netbox_zabbix_status.change_zabbixhost %}
+    <div class="modal fade" id="zabbix-tag-add-modal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_add_tag' pk=object.pk %}">
+            {% csrf_token %}
+            <div class="modal-header">
+              <h5 class="modal-title">Pridať vlastný Zabbix tag</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavrieť"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted">
+                Zapíše nový tag priamo na hosta <code>{{ object.name }}</code> v Zabbixe.
+                Tag spravovaný pluginom automaticky (napr. <code>nbx_siteid</code>) tu
+                zapísať nejde — použi tlačidlo „Vygenerovať Zabbix tagy" vyššie.
+              </p>
+              <div class="mb-2">
+                <label class="form-label" for="zabbix-tag-add-key">Kľúč</label>
+                <input type="text" class="form-control" id="zabbix-tag-add-key" name="tag_key" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label" for="zabbix-tag-add-value">Hodnota</label>
+                <input type="text" class="form-control" id="zabbix-tag-add-value" name="tag_value">
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Zrušiť</button>
+              <button type="submit" class="btn btn-primary">
+                <i class="mdi mdi-tag-plus"></i> Pridať tag
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
   {% if perms.netbox_zabbix_status.change_zabbixhost and removable_zabbix_tags %}
     <div class="modal fade" id="zabbix-tags-remove-modal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog">
@@ -98,6 +150,16 @@
           <tr>
             <th scope="row">Šablóny</th>
             <td>{{ object.templates|join:", "|placeholder }}</td>
+          </tr>
+          <tr>
+            <th scope="row">Zabbix tagy</th>
+            <td>
+              {% for t in object.display_tags %}
+                <span class="badge text-bg-secondary me-1">{{ t.tag }}{% if t.value %}: {{ t.value }}{% endif %}</span>
+              {% empty %}
+                {{ ''|placeholder }}
+              {% endfor %}
+            </td>
           </tr>
           <tr>
             <th scope="row">Posledný sync</th>

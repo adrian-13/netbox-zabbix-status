@@ -19,7 +19,7 @@ from utilities.views import ViewTab, register_model_view
 from virtualization.forms import VirtualMachineForm, VMInterfaceForm
 from virtualization.models import VirtualMachine
 
-from .choices import AvailabilityChoices, SeverityChoices
+from .choices import AvailabilityChoices, MatchMethodChoices, SeverityChoices
 from .filtersets import ZabbixHostFilterSet, ZabbixProblemFilterSet
 from .forms import (
     ZabbixHostAssignForm,
@@ -341,8 +341,13 @@ class ZabbixHostView(generic.ObjectView):
                 for t in current
                 if t.get('tag') in managed
             ]
+            # "Vygenerovať Zabbix tagy" má zmysel len pre už spárovaný host
+            # (potrebuje Device/VM, z ktorého vezme site/pk/rack) — pozri
+            # ZabbixHostRegenerateTagsView.
+            context['can_regenerate_tags'] = bool(instance.assigned_object)
         else:
             context['removable_zabbix_tags'] = []
+            context['can_regenerate_tags'] = False
 
         return context
 
@@ -602,6 +607,74 @@ class ZabbixHostEditView(generic.ObjectEditView):
     form = ZabbixHostAssignForm
 
 
+class ZabbixHostRegenerateTagsView(PermissionRequiredMixin, View):
+    """Tlačidlo „Vygenerovať Zabbix tagy" na detaile Zabbix hosta — znovu
+    zapíše spravované tagy (`_managed_zabbix_tag_keys()`) podľa AKTUÁLNEHO
+    stavu spárovaného NetBox objektu, rovnakou logikou ako pri prvotnom
+    importe (`ZabbixHostImportView._update_zabbix_tags`,
+    `_build_managed_tag_values()`). Určené na obnovu po tom, čo boli tagy
+    odstránené tlačidlom „Odstrániť Zabbix tagy" (alebo zmazané priamo
+    v Zabbixe) — bez tohto tlačidla by jediná cesta k opätovnému zápisu bola
+    ručná úprava v Zabbixe. Rovnaké oprávnenie ako ostatné zápisové akcie na
+    hostovi."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixhost'
+
+    def post(self, request, pk):
+        host = get_object_or_404(ZabbixHost, pk=pk)
+        if not host.assigned_object:
+            messages.error(request, 'Host nie je spárovaný, tagy nie je z čoho vygenerovať.')
+            return redirect(host.get_absolute_url())
+
+        tag_values = _build_managed_tag_values(host.assigned_object)
+        try:
+            update_host_tags(host.zabbix_hostid, tag_values)
+        except Exception as e:
+            messages.error(request, f'Vygenerovanie Zabbix tagov zlyhalo: {e}')
+        else:
+            written = ', '.join(
+                f'{k}={v}' for k, v in sorted(tag_values.items()) if v is not None
+            )
+            messages.success(request, f'Zabbix tagy vygenerované: {written}.')
+        return redirect(host.get_absolute_url())
+
+
+class ZabbixHostAddCustomTagView(PermissionRequiredMixin, View):
+    """Modálne okno „Pridať vlastný tag" na detaile Zabbix hosta — zapíše
+    ĽUBOVOĽNÝ tag (kľúč+hodnota) priamo do Zabbixu cez `update_host_tags()`
+    (tá istá merge-not-replace logika ako pri spravovaných tagoch). Kľúč
+    z `_managed_zabbix_tag_keys()` je zámerne ODMIETNUTÝ — tie sa majú meniť
+    výhradne cez „Vygenerovať"/„Odstrániť" tlačidlá, aby si táto cesta a tá
+    automatická navzájom ticho neprepisovali hodnoty. Funguje aj na
+    nespárovanom hostovi (vlastné tagy nezávisia od Device/VM väzby)."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixhost'
+
+    def post(self, request, pk):
+        host = get_object_or_404(ZabbixHost, pk=pk)
+        key = request.POST.get('tag_key', '').strip()
+        value = request.POST.get('tag_value', '').strip()
+
+        if not key:
+            messages.error(request, 'Zadaj kľúč tagu.')
+            return redirect(host.get_absolute_url())
+        if key in _managed_zabbix_tag_keys():
+            messages.error(
+                request,
+                f'„{key}" je tag, ktorý plugin spravuje automaticky — použi tlačidlo '
+                f'„Vygenerovať Zabbix tagy" alebo „Odstrániť Zabbix tagy" namiesto tohto formulára.',
+            )
+            return redirect(host.get_absolute_url())
+
+        try:
+            update_host_tags(host.zabbix_hostid, {key: value})
+        except Exception as e:
+            messages.error(request, f'Zápis vlastného tagu zlyhal: {e}')
+        else:
+            messages.success(request, f'Tag „{key}" zapísaný do Zabbixu.')
+        return redirect(host.get_absolute_url())
+
+
 class ZabbixHostRemoveTagsView(PermissionRequiredMixin, View):
     """Modálne okno „Odstrániť Zabbix tagy" na detaile Zabbix hosta —
     inverzná operácia k ZabbixHostImportView._update_zabbix_tags(). Odstráni
@@ -732,6 +805,32 @@ def _managed_zabbix_tag_keys():
     return keys
 
 
+def _build_managed_tag_values(obj):
+    """Postaví dict spravovaných Zabbix tagov (tag_key -> hodnota) z AKTUÁLNEHO
+    stavu spárovaného NetBox objektu (Device alebo VirtualMachine) — jediné
+    miesto pravdy pre to, čo `update_host_tags()` dostane, zdieľané medzi
+    prvotným importom (ZabbixHostImportView._update_zabbix_tags) a opätovným
+    vygenerovaním už spárovaného hosta (ZabbixHostRegenerateTagsView), napr.
+    po tom čo boli tagy odstránené tlačidlom „Odstrániť Zabbix tagy" alebo
+    priamo v Zabbixe. Site tag kľúč je ten istý ako `site_id_tag_key`
+    v Nastaveniach (aby write strana nevytvárala iný tag než z akého sa pri
+    importe číta) — prázdny kľúč (funkcia vypnutá) = site tag sa nezapisuje
+    vôbec. Device navyše dostane `nbx_deviceid`+`nbx_rackid` (rack sa
+    vynechá, ak zariadenie nemá priradený rack); VM dostane `nbx_vmid` —
+    rack tag sa pre VM nezapisuje vôbec, VirtualMachine nemá rack ako
+    koncept."""
+    tag_values = {}
+    site_tag_key = get_setting('site_id_tag_key', 'nbx_siteid')
+    if site_tag_key:
+        tag_values[site_tag_key] = obj.site_id
+    if isinstance(obj, Device):
+        tag_values[DEVICE_ID_TAG_KEY] = obj.pk
+        tag_values[RACK_ID_TAG_KEY] = obj.rack_id
+    else:
+        tag_values[VM_ID_TAG_KEY] = obj.pk
+    return tag_values
+
+
 class ZabbixHostImportView(LoginRequiredMixin, View):
     """Vstupný bod pre ručný import nespárovaného Zabbix hosta do NetBoxu.
 
@@ -769,7 +868,7 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
             return redirect(request.path)
 
         save = self._save_device if kind == 'device' else self._save_vm
-        ok, obj, iface, ip_obj, forms = save(request)
+        ok, obj, iface, ip_obj, forms = save(request, host)
 
         if not ok:
             context = self._context(request, host)
@@ -785,33 +884,21 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         else:
             messages.success(request, f'Vytvorené: „{obj}".')
 
-        # Zariadenie/VM už v NetBoxe existuje (commitnuté) — zápis späť do
-        # Zabbixu je len doplnkový krok, jeho prípadné zlyhanie nesmie
-        # vrátiť/zablokovať už hotové vytvorenie.
-        self._update_zabbix_tags(request, host, obj, kind)
+        # Zariadenie/VM už v NetBoxe existuje AJ spárované s týmto hostom
+        # (host.device/virtual_machine + match_method=MANUAL sa nastavili už
+        # v _save_device/_save_vm, v tej istej transakcii ako samotný objekt)
+        # — zápis späť do Zabbixu je len doplnkový krok, jeho prípadné
+        # zlyhanie nesmie vrátiť/zablokovať už hotové vytvorenie a párovanie.
+        self._update_zabbix_tags(request, host, obj)
 
         return redirect(obj.get_absolute_url())
 
-    def _update_zabbix_tags(self, request, host, obj, kind):
+    def _update_zabbix_tags(self, request, host, obj):
         """Po importe zapíše NetBox identifikátory späť do Zabbixu ako host
         tagy — opačný smer než `_site_from_tag()` (ktorý ich pri importe
-        ČÍTA). Ak tag už existuje, hodnota sa PREPÍŠE; ak nie, PRIDÁ sa.
-        Site tag kľúč je ten istý ako `site_id_tag_key` v Nastaveniach (aby
-        write strana nevytvárala iný tag než z akého sa pri importe číta) —
-        prázdny kľúč (funkcia vypnutá) = site tag sa nezapisuje vôbec.
-        Device navyše dostane `nbx_deviceid`+`nbx_rackid` (rack sa vynechá,
-        ak zariadenie nemá priradený rack); VM dostane `nbx_vmid` — rack tag
-        sa pre VM nezapisuje vôbec, VirtualMachine nemá rack ako koncept."""
-        tag_values = {}
-        site_tag_key = get_setting('site_id_tag_key', 'nbx_siteid')
-        if site_tag_key:
-            tag_values[site_tag_key] = obj.site_id
-        if kind == 'device':
-            tag_values[DEVICE_ID_TAG_KEY] = obj.pk
-            tag_values[RACK_ID_TAG_KEY] = obj.rack_id
-        else:
-            tag_values[VM_ID_TAG_KEY] = obj.pk
-
+        ČÍTA). Zdieľaná logika s `ZabbixHostRegenerateTagsView` cez
+        `_build_managed_tag_values()`."""
+        tag_values = _build_managed_tag_values(obj)
         try:
             update_host_tags(host.zabbix_hostid, tag_values)
         except Exception as e:
@@ -887,18 +974,28 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
             'vmip_form': IPAddressForm(initial=ip_initial, prefix='vmip'),
         }
 
-    def _save_device(self, request):
-        """Vytvorí Device, a ak formulár IP adresy obsahuje neprázdnu hodnotu,
-        aj Interface (type=virtual) + IPAddress (assigned_object=ten interface,
-        primary_for_parent podľa checkboxu) — všetko v jednej transakcii.
-        Vracia (ok, device_alebo_None, iface_alebo_None, ip_alebo_None,
-        {kontextove_kluce_s_bound_formularmi_na_znovu-vykreslenie})."""
+    def _save_device(self, request, host):
+        """Vytvorí Device a rovno ho spáruje s `host` (host.device +
+        match_method=MANUAL, aby ho periodický sync nikdy neprepísal — pozri
+        MatchMethodChoices), a ak formulár IP adresy obsahuje neprázdnu
+        hodnotu, aj Interface (type=virtual) + IPAddress (assigned_object=ten
+        interface, primary_for_parent podľa checkboxu) — všetko v jednej
+        transakcii, vrátane spárovania (ak neskôr zlyhá iface/IP, rollbackne
+        sa aj ono). Vracia (ok, device_alebo_None, iface_alebo_None,
+        ip_alebo_None, {kontextove_kluce_s_bound_formularmi_na_znovu-vykreslenie})."""
         with transaction.atomic():
             device_form = DeviceForm(data=request.POST, prefix='device')
             if not device_form.is_valid():
                 transaction.set_rollback(True)
                 return False, None, None, None, {'device_form': device_form}
             device = device_form.save()
+
+            host.device = device
+            host.match_method = MatchMethodChoices.MANUAL
+            # update_fields: nechá periodicky bežiaci sync (ktorý si po
+            # svojom behu prepisuje status/tagy/last_synced) nedotknutý,
+            # keby náhodou bežal súbežne s týmto ručným importom.
+            host.save(update_fields=['device', 'match_method'])
 
             ip_value = request.POST.get('ip-address', '').strip()
             if not ip_value:
@@ -924,15 +1021,21 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
 
             return True, device, iface, ip_obj, {}
 
-    def _save_vm(self, request):
-        """Rovnaké ako _save_device, len pre VirtualMachine/VMInterface —
-        VMInterfaceForm nemá pole 'type' (VM rozhrania ho v NetBoxe nemajú)."""
+    def _save_vm(self, request, host):
+        """Rovnaké ako _save_device, len pre VirtualMachine/VMInterface
+        (host.virtual_machine namiesto host.device) — VMInterfaceForm nemá
+        pole 'type' (VM rozhrania ho v NetBoxe nemajú)."""
         with transaction.atomic():
             vm_form = VirtualMachineForm(data=request.POST, prefix='vm')
             if not vm_form.is_valid():
                 transaction.set_rollback(True)
                 return False, None, None, None, {'vm_form': vm_form}
             vm = vm_form.save()
+
+            host.virtual_machine = vm
+            host.match_method = MatchMethodChoices.MANUAL
+            # update_fields: pozri rovnaký komentár v _save_device vyššie.
+            host.save(update_fields=['virtual_machine', 'match_method'])
 
             ip_value = request.POST.get('vmip-address', '').strip()
             if not ip_value:
