@@ -226,7 +226,15 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 
 ## Changelog
 
-### Unreleased
+### v0.6.0
+- **1:1 párovanie — jedno zariadenie/VM sa už nedá napárovať na dvoch Zabbix
+  hostov naraz** — DB constraint (Device/VM smie byť cieľom najviac jedného
+  `ZabbixHost` záznamu), jednorazové vyriešenie existujúcich duplicít
+  (nahromadených historicky pri premenovaní zariadení — sync si automatickú
+  zhodu po jej prvom nájdení nikdy neoveroval znovu) a oprava matchera aj
+  ručného párovania, aby nová duplicita už nikdy nevznikla. Ručné priradenie
+  zariadenia/VM, ktoré má už iný Zabbix host, teraz vráti prehľadnú chybu vo
+  formulári namiesto pádu.
 - **Hromadné akcie „Vygenerovať tagy" a „Prepárovať" v zozname Zabbix Hostov** —
   výber viac hostov cez checkboxy (teraz prvýkrát dostupné na tomto zozname)
   a spustí buď hromadné vygenerovanie spravovaných Zabbix tagov (rovnaká
