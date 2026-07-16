@@ -21,7 +21,7 @@ from virtualization.models import VirtualMachine, VMInterface
 from netbox.context import current_request
 
 from .choices import AvailabilityChoices, MatchMethodChoices, ZabbixHostStatusChoices
-from .matching import HostMatcher, normalize_hostname
+from .matching import HostMatcher, match_unmatched_host, normalize_hostname
 from .models import ZabbixHost, ZabbixProblem
 from .zabbix import get_client, get_setting
 
@@ -222,6 +222,22 @@ def run_sync():
     with _no_changelog(), transaction.atomic():
         existing = {h.zabbix_hostid: h for h in ZabbixHost.objects.all()}
         host_objs = {}  # zabbix hostid (str) -> ZabbixHost
+        # 1:1 párovanie — (kind, pk) páry, ktoré už majú svoj ZabbixHost
+        # (manual/kept z predchádzajúceho behu, alebo práve teraz spárované
+        # v TOMTO behu) — match_unmatched_host() to použije, aby matcher
+        # nikdy neprisúdil to isté Device/VM dvom rôznym hostom naraz.
+        # POZNÁMKA: chráni len v rámci JEDNÉHO behu run_sync() — dva súbežné
+        # behy (periodický job + ručné „Obnoviť zo Zabbixu" naraz) chránené
+        # nie sú (žiadny lock/mutex medzi nimi). V takom (zriedkavom) prípade
+        # DB UniqueConstraint zachytí kolíziu ako IntegrityError, ten beh
+        # zlyhá celý (transaction.atomic() rollback), ale žiadna duplicita sa
+        # nedostane do DB — a ďalší naplánovaný sync sa sám opraví.
+        claimed = set()
+        for h in existing.values():
+            if h.device_id:
+                claimed.add(('device', h.device_id))
+            if h.virtual_machine_id:
+                claimed.add(('vm', h.virtual_machine_id))
 
         for zh in zabbix_hosts:
             hostid = int(zh['hostid'])
@@ -268,7 +284,7 @@ def run_sync():
             ):
                 stats['matched_kept'] += 1
             else:
-                kind, pk, method = matcher.match(zh)
+                kind, pk, method = match_unmatched_host(matcher, zh, claimed)
                 obj.device_id = pk if kind == 'device' else None
                 obj.virtual_machine_id = pk if kind == 'vm' else None
                 obj.match_method = method

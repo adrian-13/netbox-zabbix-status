@@ -226,6 +226,21 @@ class ZabbixHost(NetBoxModel):
                 condition=Q(device__isnull=True) | Q(virtual_machine__isnull=True),
                 name='%(app_label)s_%(class)s_single_assignment',
             ),
+            # 1:1 párovanie — jedno Device/VM smie byť cieľom NAJVIAC jedného
+            # ZabbixHost záznamu naraz (opačný smer, teda jeden ZabbixHost ->
+            # najviac jedno Device/VM, je už daný obyčajným FK). Podmienené
+            # (nie plain unique), lebo NULL/NULL (nespárované hosty) sú úplne
+            # bežné a nesmú medzi sebou kolidovať.
+            models.UniqueConstraint(
+                fields=['device'],
+                condition=Q(device__isnull=False),
+                name='%(app_label)s_%(class)s_unique_device',
+            ),
+            models.UniqueConstraint(
+                fields=['virtual_machine'],
+                condition=Q(virtual_machine__isnull=False),
+                name='%(app_label)s_%(class)s_unique_virtual_machine',
+            ),
         )
 
     def __str__(self):

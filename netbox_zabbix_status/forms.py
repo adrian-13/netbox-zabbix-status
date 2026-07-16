@@ -71,6 +71,9 @@ class ZabbixHostAssignForm(NetBoxModelForm):
 
     Uloženie nastaví match_method=manual (sync ho už neprepíše); vyčistenie
     oboch polí nastaví none, takže ďalší sync skúsi automatické párovanie.
+    1:1 párovanie: `clean()` odmietne Device/VM, ktoré už má iný ZabbixHost
+    (rovnaká vec, akú presadzuje DB UniqueConstraint na modeli — tu sa
+    ale zachytí ako pekná formulárová chyba, nie ako 500-ka na IntegrityError).
     """
 
     device = DynamicModelChoiceField(
@@ -87,6 +90,24 @@ class ZabbixHostAssignForm(NetBoxModelForm):
     class Meta:
         model = ZabbixHost
         fields = ('device', 'virtual_machine')
+
+    def clean(self):
+        # NIE `cleaned_data = super().clean()` — NetBoxModelForm.clean() ide
+        # cez CheckLastUpdatedMixin, ktorý pri editácii existujúcej inštancie
+        # (self.instance.pk nastavené — ZabbixHost sa vždy len edituje, nikdy
+        # nevytvára cez tento formulár) vracia None namiesto self.cleaned_data
+        # (nedodržiava štandardný Django kontrakt). Zavolať super().clean()
+        # kvôli jeho vedľajším účinkom, ale čítať/vracať vždy self.cleaned_data
+        # priamo — tá je vždy správne naplnená bez ohľadu na návratovú hodnotu.
+        super().clean()
+        cleaned_data = self.cleaned_data
+        device = cleaned_data.get('device')
+        vm = cleaned_data.get('virtual_machine')
+        if device and ZabbixHost.objects.filter(device=device).exclude(pk=self.instance.pk).exists():
+            self.add_error('device', 'Toto zariadenie je už spárované s iným Zabbix hostom.')
+        if vm and ZabbixHost.objects.filter(virtual_machine=vm).exclude(pk=self.instance.pk).exists():
+            self.add_error('virtual_machine', 'Tento virtuálny stroj je už spárovaný s iným Zabbix hostom.')
+        return cleaned_data
 
     def save(self, *args, **kwargs):
         self.instance.match_method = (

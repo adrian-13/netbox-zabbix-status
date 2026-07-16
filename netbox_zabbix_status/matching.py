@@ -64,3 +64,24 @@ class HostMatcher:
                     return kind, pk, MatchMethodChoices.IP
 
         return None, None, MatchMethodChoices.NONE
+
+
+def match_unmatched_host(matcher: HostMatcher, zabbix_host: dict, claimed: set):
+    """Obálka nad `HostMatcher.match()`, ktorá navyše zaručí 1:1 párovanie —
+    ak by matcher.match() vrátil kandidáta, ktorý je už v `claimed` (iný
+    ZabbixHost už naň ukazuje, či už z DB pred týmto behom, alebo mu ho
+    priradil tento istý beh o riadok skôr), namiesto neho vráti
+    (None, None, MatchMethodChoices.NONE) — host ostane nespárovaný, radšej
+    než aby ukradol cudziu väzbu (DB UniqueConstraint by to aj tak zamietlo
+    a spadla by celá sync transakcia). Pri úspešnej voľnej zhode `claimed`
+    rovno aktualizuje (mutuje set), aby ju nemohol zabrať aj ďalší host
+    v tom istom behu spracovaný o riadok neskôr. `matcher.match()` sám osebe
+    ostáva čistá funkcia (testovateľná bez tohto stavu) — táto obálka je
+    jediné miesto, ktoré zavádza mutabilitu, používa ju `sync.run_sync()`
+    aj hromadné prepárovanie (bulk re-match)."""
+    kind, pk, method = matcher.match(zabbix_host)
+    if kind is not None and (kind, pk) in claimed:
+        return None, None, MatchMethodChoices.NONE
+    if kind is not None:
+        claimed.add((kind, pk))
+    return kind, pk, method
