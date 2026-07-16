@@ -13,6 +13,7 @@ from django.views.generic import View
 from dcim.forms import DeviceForm, InterfaceForm
 from dcim.models import Device, Site
 from ipam.forms import IPAddressForm
+from netbox.object_actions import BulkExport, ObjectAction
 from netbox.views import generic
 from utilities.request import safe_for_redirect
 from utilities.views import ViewTab, register_model_view
@@ -27,8 +28,9 @@ from .forms import (
     ZabbixProblemFilterForm,
     ZabbixSettingsForm,
 )
+from .matching import match_unmatched_host
 from .models import ZabbixConfiguration, ZabbixHost, ZabbixProblem
-from .sync import run_sync
+from .sync import build_matcher, run_sync
 from .tables import ZabbixHostTable, ZabbixProblemTable
 from .zabbix import (
     HISTORY_LIMIT,
@@ -289,8 +291,35 @@ class VirtualMachineZabbixTabView(ZabbixTabView):
 
 
 #
-# Zoznamy a detail (M4) — synced dáta sú read-only, preto len export akcia
+# Zoznamy a detail (M4) — synced dáta sú read-only voči Zabbixu, preto
+# žiadny bulk-edit/delete polí; vlastné hromadné akcie nižšie cielia na
+# Zabbix tagy a párovanie (ZabbixHostBulkRegenerateTagsView/
+# ZabbixHostBulkRematchView), nie na polia ZabbixHost samotného.
 #
+
+class RegenerateTagsBulkAction(ObjectAction):
+    """Hromadné tlačidlo „Vygenerovať tagy" nad zoznamom Hostov — cieli na
+    ZabbixHostBulkRegenerateTagsView. multi=True je to, čo NetBox core
+    (TableMixin.get_table/ObjectListView.get, has_table_actions počíta
+    any(a.multi for a in actions)) používa na rozhodnutie, či vôbec
+    zobraziť výberové checkboxy — predtým žiadna akcia na tomto zozname
+    multi=True nemala."""
+    name = 'bulk_regenerate_tags'
+    label = 'Vygenerovať tagy'
+    multi = True
+    permissions_required = {'change'}
+    template_name = 'netbox_zabbix_status/buttons/bulk_regenerate_tags.html'
+
+
+class RematchBulkAction(ObjectAction):
+    """Hromadné tlačidlo „Prepárovať" nad zoznamom Hostov — cieli na
+    ZabbixHostBulkRematchView."""
+    name = 'bulk_rematch'
+    label = 'Prepárovať'
+    multi = True
+    permissions_required = {'change'}
+    template_name = 'netbox_zabbix_status/buttons/bulk_rematch.html'
+
 
 @register_model_view(ZabbixHost, 'list', path='', detail=False)
 class ZabbixHostListView(generic.ObjectListView):
@@ -300,7 +329,9 @@ class ZabbixHostListView(generic.ObjectListView):
     table = ZabbixHostTable
     filterset = ZabbixHostFilterSet
     filterset_form = ZabbixHostFilterForm
-    actions = {'export': {'view'}}
+    # BulkExport je natívna NetBox akcia, nahrádza starší dict-style
+    # actions = {'export': {'view'}} (deprecated od NetBox 4.7).
+    actions = (BulkExport, RegenerateTagsBulkAction, RematchBulkAction)
     template_name = 'netbox_zabbix_status/zabbixhost_list.html'
 
     def get_extra_context(self, request):
@@ -704,6 +735,118 @@ class ZabbixHostRemoveTagsView(PermissionRequiredMixin, View):
                 request, f'Odstránené tagy v Zabbixe: {", ".join(sorted(selected))}.'
             )
         return redirect(host.get_absolute_url())
+
+
+class ZabbixHostBulkRegenerateTagsView(PermissionRequiredMixin, View):
+    """Hromadné „Vygenerovať Zabbix tagy" nad výberom (checkboxy) v zozname
+    Hostov — tá istá logika ako ZabbixHostRegenerateTagsView
+    (_build_managed_tag_values), len naraz pre všetky vybrané, spárované
+    hosty. Nespárované vo výbere sa ticho preskočia (nie je z čoho
+    generovať), počet sa nahlási v súhrnnej správe. Žiadny confirm krok
+    navyše — rovnaká no-modal filozofia ako jednohostová verzia
+    (deterministický zápis, dá sa kedykoľvek bezpečne zopakovať)."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixhost'
+
+    def post(self, request):
+        pk_list = [int(pk) for pk in request.POST.getlist('pk')]
+        hosts = ZabbixHost.objects.filter(pk__in=pk_list)
+
+        succeeded = 0
+        skipped = 0
+        failed = []
+        for host in hosts:
+            if not host.assigned_object:
+                skipped += 1
+                continue
+            tag_values = _build_managed_tag_values(host.assigned_object)
+            try:
+                update_host_tags(host.zabbix_hostid, tag_values)
+            except Exception as e:
+                failed.append(f'{host}: {e}')
+            else:
+                succeeded += 1
+
+        if succeeded:
+            messages.success(request, f'Zabbix tagy vygenerované pre {succeeded} host(y/ov).')
+        if skipped:
+            messages.info(request, f'{skipped} nespárovaných hostov vo výbere preskočených.')
+        if failed:
+            messages.error(request, 'Zlyhalo: ' + '; '.join(failed))
+        if not (succeeded or skipped or failed):
+            messages.warning(request, 'Nebol vybraný žiadny host.')
+
+        return_url = request.POST.get('return_url')
+        if return_url and safe_for_redirect(return_url):
+            return redirect(return_url)
+        return redirect('plugins:netbox_zabbix_status:zabbixhost_list')
+
+
+class ZabbixHostBulkRematchView(PermissionRequiredMixin, View):
+    """Hromadné „Prepárovať" nad výberom (checkboxy) v zozname Hostov —
+    spustí ten istý matcher (meno -> IP), akým beží aj periodický sync
+    (sync.build_matcher), OKAMŽITE (nečaká sa na najbližší naplánovaný
+    beh), len pre vybraných hostov. Nikdy sa nedotkne hosta s
+    match_method=manual, ani hosta, ktorý je už automaticky spárovaný
+    (name/ip) s platným cieľom — presne tá istá „manual/kept sa nikdy
+    neprepíše" zásada ako v sync.run_sync(). 1:1 výhradnosť cez rovnaký
+    matching.match_unmatched_host() wrapper, takže dvaja vybraní hostia si
+    nikdy neukradnú to isté Device/VM. Pracuje čisto nad DB-synced dátami
+    hosta (name/visible_name/interfaces) — nepotrebuje žiadny live dopyt
+    na Zabbix."""
+
+    permission_required = 'netbox_zabbix_status.change_zabbixhost'
+
+    def post(self, request):
+        pk_list = [int(pk) for pk in request.POST.getlist('pk')]
+        hosts = list(ZabbixHost.objects.filter(pk__in=pk_list))
+
+        matcher = build_matcher()
+        claimed = set()
+        for device_id in ZabbixHost.objects.exclude(device=None).values_list('device_id', flat=True):
+            claimed.add(('device', device_id))
+        for vm_id in ZabbixHost.objects.exclude(virtual_machine=None).values_list('virtual_machine_id', flat=True):
+            claimed.add(('vm', vm_id))
+
+        matched_name = matched_ip = skipped = 0
+        for host in hosts:
+            has_target = bool(host.device_id or host.virtual_machine_id)
+            if host.match_method == MatchMethodChoices.MANUAL and has_target:
+                skipped += 1
+                continue
+            if has_target and host.match_method in (MatchMethodChoices.NAME, MatchMethodChoices.IP):
+                skipped += 1
+                continue
+
+            zh = {'host': host.name, 'name': host.visible_name, 'interfaces': host.interfaces}
+            kind, pk, method = match_unmatched_host(matcher, zh, claimed)
+            if kind is None:
+                skipped += 1
+                continue
+
+            host.device_id = pk if kind == 'device' else None
+            host.virtual_machine_id = pk if kind == 'vm' else None
+            host.match_method = method
+            host.save(update_fields=['device', 'virtual_machine', 'match_method'])
+            if method == MatchMethodChoices.NAME:
+                matched_name += 1
+            else:
+                matched_ip += 1
+
+        if matched_name or matched_ip:
+            messages.success(
+                request,
+                f'Automaticky spárované: {matched_name} podľa mena, {matched_ip} podľa IP.',
+            )
+        else:
+            messages.info(request, 'Žiadne nové zhody sa nenašli.')
+        if skipped:
+            messages.info(request, f'{skipped} hostov vo výbere preskočených (už spárované/manuálne/bez zhody).')
+
+        return_url = request.POST.get('return_url')
+        if return_url and safe_for_redirect(return_url):
+            return redirect(return_url)
+        return redirect('plugins:netbox_zabbix_status:zabbixhost_list')
 
 
 #

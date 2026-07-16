@@ -227,6 +227,15 @@ kontajnera, bez rebuildu image. Rebuild treba len pri zmene závislostí
 ## Changelog
 
 ### Unreleased
+- **Hromadné akcie „Vygenerovať tagy" a „Prepárovať" v zozname Zabbix Hostov** —
+  výber viac hostov cez checkboxy (teraz prvýkrát dostupné na tomto zozname)
+  a spustí buď hromadné vygenerovanie spravovaných Zabbix tagov (rovnaká
+  logika ako jednohostové tlačidlo, nespárované vo výbere sa preskočia), alebo
+  hromadné prepárovanie — spustí ten istý automatický matcher (meno/IP), akým
+  beží periodický sync, okamžite namiesto čakania na najbližší cyklus, len pre
+  vybraných hostov. Prepárovanie sa nikdy nedotkne ručne priradených ani už
+  platne automaticky spárovaných hostov a rešpektuje 1:1 výhradnosť (dvaja
+  vybraní hostia si nikdy neukradnú to isté zariadenie/VM).
 - **Oprava: import zo Zabbixu teraz naozaj spáruje vytvorené zariadenie/VM
   s hostom** — `ZabbixHostImportView` predtým vytvorilo Device/VM (aj zápis
   tagov späť do Zabbixu), ale nikdy nenastavilo `ZabbixHost.device`/
