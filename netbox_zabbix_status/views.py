@@ -63,8 +63,8 @@ HISTORY_RANGE_CHOICES = (
     ('1h', '1 h'),
     ('6h', '6 h'),
     ('24h', '24 h'),
-    ('7d', '7 dní'),
-    ('30d', '30 dní'),
+    ('7d', '7 days'),
+    ('30d', '30 days'),
 )
 HISTORY_RANGE_DELTAS = {
     '1h': timedelta(hours=1),
@@ -148,9 +148,9 @@ def _build_history_context(request, host):
                     if custom_till else now_ts
                 )
                 if time_from >= time_till:
-                    raise ValueError('Od musí byť pred Do')
+                    raise ValueError('From must be before To')
             except ValueError:
-                history_error = 'Neplatný časový rozsah — skontroluj zadané dátumy.'
+                history_error = 'Invalid time range — check the entered dates.'
         else:
             if range_key not in HISTORY_RANGE_DELTAS:
                 range_key = DEFAULT_HISTORY_RANGE
@@ -305,7 +305,7 @@ class RegenerateTagsBulkAction(ObjectAction):
     zobraziť výberové checkboxy — predtým žiadna akcia na tomto zozname
     multi=True nemala."""
     name = 'bulk_regenerate_tags'
-    label = 'Vygenerovať tagy'
+    label = 'Generate tags'
     multi = True
     permissions_required = {'change'}
     template_name = 'netbox_zabbix_status/buttons/bulk_regenerate_tags.html'
@@ -315,7 +315,7 @@ class RematchBulkAction(ObjectAction):
     """Hromadné tlačidlo „Prepárovať" nad zoznamom Hostov — cieli na
     ZabbixHostBulkRematchView."""
     name = 'bulk_rematch'
-    label = 'Prepárovať'
+    label = 'Rematch'
     multi = True
     permissions_required = {'change'}
     template_name = 'netbox_zabbix_status/buttons/bulk_rematch.html'
@@ -409,10 +409,10 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
         )
         if matched_only:
             hosts = matched
-            scope_note = 'zobrazené sú len spárované hosty'
+            scope_note = 'showing matched hosts only'
         else:
             hosts = ZabbixHost.objects.all()
-            scope_note = 'zobrazené sú všetky hosty zo Zabbixu'
+            scope_note = 'showing all hosts from Zabbix'
 
         # Severity na dashboarde: výber z nastavení; prázdny = automaticky
         # všetky od minimálnej severity (dlaždice pod ňou by boli vždy 0)
@@ -451,13 +451,13 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
 
         stats = []
         if matching_enabled:
-            stats.append({'label': 'Spárované hosty', 'value': matched.count(),
+            stats.append({'label': 'Matched hosts', 'value': matched.count(),
                           'icon': 'mdi-server', 'url': f'{hosts_url}?is_matched=true'})
         else:
-            stats.append({'label': 'Hosty', 'value': hosts.count(),
+            stats.append({'label': 'Hosts', 'value': hosts.count(),
                           'icon': 'mdi-server', 'url': hosts_url})
         stats += [
-            {'label': 'S problémami', 'value': hosts.filter(problem_count__gt=0).count(),
+            {'label': 'With problems', 'value': hosts.filter(problem_count__gt=0).count(),
              'icon': 'mdi-alert-circle-outline', 'url': f'{hosts_url}{scope_qs}has_problems=true'},
             {'label': 'Agent down',
              'value': hosts.filter(agent_available=AvailabilityChoices.DOWN).count(),
@@ -469,13 +469,13 @@ class ZabbixDashboardView(LoginRequiredMixin, View):
              'icon': 'mdi-wrench', 'url': f'{hosts_url}{scope_qs}in_maintenance=true'},
         ]
         if matching_enabled:
-            stats.append({'label': 'Nespárované',
+            stats.append({'label': 'Unmatched',
                           'value': ZabbixHost.objects.filter(
                               device__isnull=True, virtual_machine__isnull=True).count(),
                           'icon': 'mdi-link-off',
                           'url': f'{hosts_url}?is_matched=false'})
         else:
-            stats.append({'label': 'Vypnuté',
+            stats.append({'label': 'Disabled',
                           'value': hosts.filter(status='disabled').count(),
                           'icon': 'mdi-power-plug-off',
                           'url': f'{hosts_url}{scope_qs}status=disabled'})
@@ -543,10 +543,10 @@ class DashboardSeveritiesView(PermissionRequiredMixin, View):
         config.dashboard_severities = severities
         config.save()
         if severities:
-            messages.success(request, 'Výber severít na dashboarde uložený.')
+            messages.success(request, 'Dashboard severity selection saved.')
         else:
             messages.success(
-                request, 'Výber severít zrušený — zobrazujú sa všetky od minimálnej severity.'
+                request, 'Severity selection cleared — showing all from minimum severity.'
             )
         return redirect('plugins:netbox_zabbix_status:dashboard')
 
@@ -566,9 +566,9 @@ class HostsVisibleTagsView(PermissionRequiredMixin, View):
         config.visible_tag_keys = keys
         config.save()
         if keys:
-            messages.success(request, f'Zobrazujú sa len tagy: {", ".join(keys)}.')
+            messages.success(request, f'Showing only tags: {", ".join(keys)}.')
         else:
-            messages.success(request, 'Zobrazujú sa všetky Zabbix tagy.')
+            messages.success(request, 'Showing all Zabbix tags.')
         return_url = request.POST.get('return_url', '')
         if not safe_for_redirect(return_url):
             # startswith('/') by pustil aj protokol-relatívne URL ako '//evil.example.com/'
@@ -587,12 +587,12 @@ class ZabbixRefreshView(LoginRequiredMixin, View):
         except ZabbixConfigError as e:
             messages.error(request, str(e))
         except Exception as e:
-            messages.error(request, f'Obnovenie zo Zabbixu zlyhalo: {e}')
+            messages.error(request, f'Refresh from Zabbix failed: {e}')
         else:
             messages.success(
                 request,
-                f"Obnovené zo Zabbixu: {stats['hosts_total']} hostov, "
-                f"{stats['problems_total']} problémov ({stats['duration_s']} s).",
+                f"Refreshed from Zabbix: {stats['hosts_total']} hosts, "
+                f"{stats['problems_total']} problems ({stats['duration_s']} s).",
             )
         return_url = request.POST.get('return_url', '')
         if not safe_for_redirect(return_url):
@@ -614,7 +614,7 @@ class ZabbixSettingsView(PermissionRequiredMixin, View):
         form = ZabbixSettingsForm(request.POST, instance=ZabbixConfiguration.get_solo())
         if form.is_valid():
             form.save()
-            messages.success(request, 'Zabbix nastavenia uložené — platia okamžite.')
+            messages.success(request, 'Zabbix settings saved — effective immediately.')
             return redirect('plugins:netbox_zabbix_status:settings')
         return self._render(request, form)
 
@@ -654,19 +654,19 @@ class ZabbixHostRegenerateTagsView(PermissionRequiredMixin, View):
     def post(self, request, pk):
         host = get_object_or_404(ZabbixHost, pk=pk)
         if not host.assigned_object:
-            messages.error(request, 'Host nie je spárovaný, tagy nie je z čoho vygenerovať.')
+            messages.error(request, 'Host is not matched, there is nothing to generate tags from.')
             return redirect(host.get_absolute_url())
 
         tag_values = _build_managed_tag_values(host.assigned_object)
         try:
             update_host_tags(host.zabbix_hostid, tag_values)
         except Exception as e:
-            messages.error(request, f'Vygenerovanie Zabbix tagov zlyhalo: {e}')
+            messages.error(request, f'Generating Zabbix tags failed: {e}')
         else:
             written = ', '.join(
                 f'{k}={v}' for k, v in sorted(tag_values.items()) if v is not None
             )
-            messages.success(request, f'Zabbix tagy vygenerované: {written}.')
+            messages.success(request, f'Zabbix tags generated: {written}.')
         return redirect(host.get_absolute_url())
 
 
@@ -687,22 +687,22 @@ class ZabbixHostAddCustomTagView(PermissionRequiredMixin, View):
         value = request.POST.get('tag_value', '').strip()
 
         if not key:
-            messages.error(request, 'Zadaj kľúč tagu.')
+            messages.error(request, 'Enter a tag key.')
             return redirect(host.get_absolute_url())
         if key in _managed_zabbix_tag_keys():
             messages.error(
                 request,
-                f'„{key}" je tag, ktorý plugin spravuje automaticky — použi tlačidlo '
-                f'„Vygenerovať Zabbix tagy" alebo „Odstrániť Zabbix tagy" namiesto tohto formulára.',
+                f'"{key}" is a tag managed automatically by the plugin — use the '
+                f'"Generate Zabbix tags" or "Remove Zabbix tags" button instead of this form.',
             )
             return redirect(host.get_absolute_url())
 
         try:
             update_host_tags(host.zabbix_hostid, {key: value})
         except Exception as e:
-            messages.error(request, f'Zápis vlastného tagu zlyhal: {e}')
+            messages.error(request, f'Writing custom tag failed: {e}')
         else:
-            messages.success(request, f'Tag „{key}" zapísaný do Zabbixu.')
+            messages.success(request, f'Tag "{key}" written to Zabbix.')
         return redirect(host.get_absolute_url())
 
 
@@ -723,16 +723,16 @@ class ZabbixHostRemoveTagsView(PermissionRequiredMixin, View):
         selected = set(request.POST.getlist('tag_keys')) & _managed_zabbix_tag_keys()
 
         if not selected:
-            messages.info(request, 'Nebol vybraný žiadny tag na odstránenie.')
+            messages.info(request, 'No tag was selected for removal.')
             return redirect(host.get_absolute_url())
 
         try:
             remove_host_tags(host.zabbix_hostid, selected)
         except Exception as e:
-            messages.error(request, f'Odstránenie Zabbix tagov zlyhalo: {e}')
+            messages.error(request, f'Removing Zabbix tags failed: {e}')
         else:
             messages.success(
-                request, f'Odstránené tagy v Zabbixe: {", ".join(sorted(selected))}.'
+                request, f'Removed tags in Zabbix: {", ".join(sorted(selected))}.'
             )
         return redirect(host.get_absolute_url())
 
@@ -768,13 +768,13 @@ class ZabbixHostBulkRegenerateTagsView(PermissionRequiredMixin, View):
                 succeeded += 1
 
         if succeeded:
-            messages.success(request, f'Zabbix tagy vygenerované pre {succeeded} host(y/ov).')
+            messages.success(request, f'Zabbix tags generated for {succeeded} host(s).')
         if skipped:
-            messages.info(request, f'{skipped} nespárovaných hostov vo výbere preskočených.')
+            messages.info(request, f'{skipped} unmatched hosts in the selection were skipped.')
         if failed:
-            messages.error(request, 'Zlyhalo: ' + '; '.join(failed))
+            messages.error(request, 'Failed: ' + '; '.join(failed))
         if not (succeeded or skipped or failed):
-            messages.warning(request, 'Nebol vybraný žiadny host.')
+            messages.warning(request, 'No host was selected.')
 
         return_url = request.POST.get('return_url')
         if return_url and safe_for_redirect(return_url):
@@ -836,12 +836,12 @@ class ZabbixHostBulkRematchView(PermissionRequiredMixin, View):
         if matched_name or matched_ip:
             messages.success(
                 request,
-                f'Automaticky spárované: {matched_name} podľa mena, {matched_ip} podľa IP.',
+                f'Automatically matched: {matched_name} by name, {matched_ip} by IP.',
             )
         else:
-            messages.info(request, 'Žiadne nové zhody sa nenašli.')
+            messages.info(request, 'No new matches found.')
         if skipped:
-            messages.info(request, f'{skipped} hostov vo výbere preskočených (už spárované/manuálne/bez zhody).')
+            messages.info(request, f'{skipped} hosts in the selection were skipped (already matched/manual/no match).')
 
         return_url = request.POST.get('return_url')
         if return_url and safe_for_redirect(return_url):
@@ -991,14 +991,14 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
     def get(self, request, pk):
         host = get_object_or_404(ZabbixHost, pk=pk)
         if host.assigned_object:
-            messages.info(request, 'Tento host je už spárovaný.')
+            messages.info(request, 'This host is already matched.')
             return redirect(host.get_absolute_url())
         return render(request, 'netbox_zabbix_status/host_import.html', self._context(request, host))
 
     def post(self, request, pk):
         host = get_object_or_404(ZabbixHost, pk=pk)
         if host.assigned_object:
-            messages.info(request, 'Tento host je už spárovaný.')
+            messages.info(request, 'This host is already matched.')
             return redirect(host.get_absolute_url())
 
         kind = request.POST.get('kind')
@@ -1007,7 +1007,7 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         if kind == 'vm' and not request.user.has_perm('virtualization.add_virtualmachine'):
             kind = None
         if kind not in ('device', 'vm'):
-            messages.error(request, 'Neplatná alebo neoprávnená požiadavka.')
+            messages.error(request, 'Invalid or unauthorized request.')
             return redirect(request.path)
 
         save = self._save_device if kind == 'device' else self._save_vm
@@ -1021,11 +1021,11 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         if iface:
             messages.success(
                 request,
-                f'Vytvorené: „{obj}", rozhranie „{iface}"'
-                + (f', IP „{ip_obj}"' if ip_obj else '') + '.'
+                f'Created: "{obj}", interface "{iface}"'
+                + (f', IP "{ip_obj}"' if ip_obj else '') + '.'
             )
         else:
-            messages.success(request, f'Vytvorené: „{obj}".')
+            messages.success(request, f'Created: "{obj}".')
 
         # Zariadenie/VM už v NetBoxe existuje AJ spárované s týmto hostom
         # (host.device/virtual_machine + match_method=MANUAL sa nastavili už
@@ -1047,7 +1047,7 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         except Exception as e:
             messages.warning(
                 request,
-                f'Objekt bol vytvorený, ale aktualizácia Zabbix tagov zlyhala: {e}',
+                f'Object was created, but updating Zabbix tags failed: {e}',
             )
 
     # -- zdieľané pomocné metódy --------------------------------------------
@@ -1061,12 +1061,12 @@ class ZabbixHostImportView(LoginRequiredMixin, View):
         interfaces_str = ', '.join(_format_interface(i) for i in host.interfaces) or '—'
         last_synced_str = host.last_synced if host.last_synced else '—'
         return (
-            f'Importované zo Zabbix hosta "{visible}" (host ID {host.zabbix_hostid}).\n'
+            f'Imported from Zabbix host "{visible}" (host ID {host.zabbix_hostid}).\n'
             f'Host groups: {host_groups_str}\n'
-            f'Šablóny: {templates_str}\n'
+            f'Templates: {templates_str}\n'
             f'Proxy: {proxy_str}\n'
-            f'Interfejsy: {interfaces_str}\n'
-            f'Posledný sync zo Zabbixu: {last_synced_str}'
+            f'Interfaces: {interfaces_str}\n'
+            f'Last synced from Zabbix: {last_synced_str}'
         )
 
     def _context(self, request, host):

@@ -1,12 +1,12 @@
 {% extends 'generic/_base.html' %}
 {% load form_helpers %}
 
-{% block title %}Zabbix nastavenia{% endblock %}
+{% block title %}Zabbix Settings{% endblock %}
 
 {% block controls %}
   <div class="btn-list">
     <a href="{% url 'plugins:netbox_zabbix_status:zabbixconfiguration_changelog' pk=config_pk %}"
-       class="btn btn-outline-secondary" title="Kto a kedy zmenil tieto nastavenia">
+       class="btn btn-outline-secondary" title="Who changed these settings and when">
       <i class="mdi mdi-history"></i> Changelog
     </a>
   </div>
@@ -22,7 +22,7 @@
         {% endif %}
 
         <div class="card">
-          <h2 class="card-header">Párovanie s NetBoxom</h2>
+          <h2 class="card-header">Matching with NetBox</h2>
           <div class="card-body">
             {% render_field form.matching_enabled %}
             {% if 'match_by_ip' in form.fields %}
@@ -32,27 +32,27 @@
             {% else %}
               <div class="form-text">
                 <i class="mdi mdi-information-outline"></i>
-                Ostatné voľby párovania sa objavia po zapnutí a uložení vyššie —
-                v „čistom Zabbix viewer" režime nemajú žiadny efekt.
+                The other matching options will appear after you enable and save above —
+                they have no effect in "pure Zabbix viewer" mode.
               </div>
             {% endif %}
           </div>
         </div>
 
         <div class="card">
-          <h2 class="card-header">Import zo Zabbixu</h2>
+          <h2 class="card-header">Import from Zabbix</h2>
           <div class="card-body">
             {% render_field form.site_id_tag_key %}
             <div class="form-text">
-              Ak má nespárovaný Zabbix host tento tag, jeho hodnota (číslo) sa
-              použije priamo ako Site pri predvyplnení importného formulára —
-              má prednosť pred odhadom podľa host group.
+              If an unmatched Zabbix host has this tag, its value (a number) will be
+              used directly as the Site when pre-filling the import form —
+              it takes precedence over the host group-based guess.
             </div>
           </div>
         </div>
 
         <div class="card">
-          <h2 class="card-header">Synchronizácia a dáta</h2>
+          <h2 class="card-header">Synchronization and data</h2>
           <div class="card-body">
             {% render_field form.sync_interval %}
             {% render_field form.min_severity %}
@@ -65,7 +65,7 @@
               <td>
                 <code>{{ api_url }}</code>
                 <span class="text-muted small">
-                  (env ZABBIX_API_URL — spolu s API tokenom zámerne mimo UI, pozri README)
+                  (env ZABBIX_API_URL — along with the API token, intentionally kept out of the UI, see README)
                 </span>
               </td>
             </tr>
@@ -80,12 +80,12 @@
             {% endif %}
             {% render_field form.dashboard_refresh %}
             <div class="form-text">
-              Výber zobrazovaných severít sa nastavuje priamo na
-              <a href="{% url 'plugins:netbox_zabbix_status:dashboard' %}">dashboarde</a>
-              (ikona ozubeného kolieska).
+              The selection of displayed severities is set directly on the
+              <a href="{% url 'plugins:netbox_zabbix_status:dashboard' %}">dashboard</a>
+              (gear icon).
               {% if 'dashboard_matched_only' not in form.fields %}
-                V „čistom Zabbix viewer" režime (párovanie vypnuté) dashboard
-                vždy zobrazuje všetky hosty zo Zabbixu.
+                In "pure Zabbix viewer" mode (matching disabled), the dashboard
+                always shows all hosts from Zabbix.
               {% endif %}
             </div>
           </div>
@@ -93,10 +93,10 @@
 
         <div class="d-flex justify-content-between align-items-center my-3">
           <div class="text-muted small">
-            Zmeny platia okamžite; len predvolené stĺpce zoznamov sa preberú po reštarte NetBoxu.
+            Changes take effect immediately; only the default list columns are picked up after a NetBox restart.
           </div>
           <button type="submit" class="btn btn-primary">
-            <i class="mdi mdi-content-save"></i> Uložiť
+            <i class="mdi mdi-content-save"></i> Save
           </button>
         </div>
       </form>

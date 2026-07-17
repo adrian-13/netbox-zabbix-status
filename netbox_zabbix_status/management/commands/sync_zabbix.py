@@ -5,7 +5,7 @@ from netbox_zabbix_status.zabbix import ZabbixConfigError
 
 
 class Command(BaseCommand):
-    help = 'Spustí Zabbix -> NetBox synchronizáciu synchrónne (mimo job queue).'
+    help = 'Runs Zabbix -> NetBox synchronization synchronously (outside the job queue).'
 
     def handle(self, *args, **options):
         try:

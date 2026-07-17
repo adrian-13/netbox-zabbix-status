@@ -50,7 +50,7 @@ PROBLEM_SEVERITY_BADGE = """
 
 ZABBIX_LINK = """
 {% if record.get_zabbix_url %}
-  <a href="{{ record.get_zabbix_url }}" target="_blank" title="Otvoriť v Zabbixe" class="me-1">
+  <a href="{{ record.get_zabbix_url }}" target="_blank" title="Open in Zabbix" class="me-1">
     <i class="mdi mdi-open-in-new"></i>
   </a>
 {% endif %}
@@ -61,8 +61,8 @@ IMPORT_LINK = """
   {% if perms.dcim.add_device or perms.virtualization.add_virtualmachine %}
     <a class="btn btn-sm btn-primary"
        href="{% url 'plugins:netbox_zabbix_status:zabbixhost_import' pk=record.pk %}"
-       aria-label="Importovať do NetBoxu ako zariadenie alebo VM"
-       title="Importovať do NetBoxu ako zariadenie alebo VM">
+       aria-label="Import into NetBox as device or VM"
+       title="Import into NetBox as device or VM">
       <i class="mdi mdi-plus"></i>
     </a>
   {% endif %}
@@ -80,24 +80,24 @@ ZABBIX_TAGS = """
 
 
 class ZabbixHostTable(NetBoxTable):
-    name = tables.Column(linkify=True, verbose_name='Meno')
-    visible_name = tables.Column(verbose_name='Viditeľné meno')
+    name = tables.Column(linkify=True, verbose_name='Name')
+    visible_name = tables.Column(verbose_name='Visible name')
     device = tables.Column(linkify=True)
     virtual_machine = tables.Column(linkify=True, verbose_name='VM')
     site = tables.Column(accessor='site', linkify=True, orderable=False)
-    status = columns.ChoiceFieldColumn(verbose_name='Stav')
-    match_method = columns.ChoiceFieldColumn(verbose_name='Párovanie')
+    status = columns.ChoiceFieldColumn(verbose_name='Status')
+    match_method = columns.ChoiceFieldColumn(verbose_name='Matching')
     agent_available = columns.ChoiceFieldColumn(verbose_name='Agent')
     snmp_available = columns.ChoiceFieldColumn(verbose_name='SNMP')
-    problem_count = tables.Column(verbose_name='Problémy')
+    problem_count = tables.Column(verbose_name='Problems')
     max_severity = tables.TemplateColumn(
-        template_code=SEVERITY_BADGE, verbose_name='Max. severita', order_by='max_severity'
+        template_code=SEVERITY_BADGE, verbose_name='Max. severity', order_by='max_severity'
     )
     in_maintenance = columns.BooleanColumn(verbose_name='Maintenance')
     last_synced = columns.DateTimeColumn(verbose_name='Sync')
     tags = columns.TagColumn(url_name='plugins:netbox_zabbix_status:zabbixhost_list')
     zabbix_tags = tables.TemplateColumn(
-        template_code=ZABBIX_TAGS, verbose_name='Zabbix tagy', orderable=False, accessor='display_tags'
+        template_code=ZABBIX_TAGS, verbose_name='Zabbix tags', orderable=False, accessor='display_tags'
     )
     # „Otvoriť v Zabbixe" (holá ikona, pôvodný vizuál) + import „+" (plné
     # tlačidlo) idú ako extra_buttons hneď vedľa edit tlačidla, nie ako
@@ -121,16 +121,16 @@ class ZabbixHostTable(NetBoxTable):
 
 class ZabbixProblemTable(NetBoxTable):
     severity = tables.TemplateColumn(
-        template_code=PROBLEM_SEVERITY_BADGE, verbose_name='Severita', order_by='severity'
+        template_code=PROBLEM_SEVERITY_BADGE, verbose_name='Severity', order_by='severity'
     )
-    name = tables.Column(verbose_name='Problém')
+    name = tables.Column(verbose_name='Problem')
     host = tables.Column(linkify=True)
-    device = tables.Column(accessor='host__device', linkify=True, verbose_name='Zariadenie')
+    device = tables.Column(accessor='host__device', linkify=True, verbose_name='Device')
     virtual_machine = tables.Column(accessor='host__virtual_machine', linkify=True, verbose_name='VM')
     site = tables.Column(accessor='host__site', linkify=True, orderable=False)
     acknowledged = columns.BooleanColumn(verbose_name='Ack')
     suppressed = columns.BooleanColumn(verbose_name='Suppressed')
-    started = columns.DateTimeColumn(verbose_name='Od')
+    started = columns.DateTimeColumn(verbose_name='Started')
     opdata = tables.Column(verbose_name='Operational data')
     zabbix_link = tables.TemplateColumn(
         template_code=ZABBIX_LINK, verbose_name='', orderable=False
@@ -149,12 +149,12 @@ class ZabbixProblemTable(NetBoxTable):
 ZABBIX_STATUS_BADGE = """
 {% with zh=value.first %}
   {% if zh %}
-    <a href="{{ zh.get_absolute_url }}" class="text-success" aria-label="Spárované so Zabbix hostom {{ zh }}"
-       title="Spárované so Zabbix hostom {{ zh }}">
+    <a href="{{ zh.get_absolute_url }}" class="text-success" aria-label="Matched with Zabbix host {{ zh }}"
+       title="Matched with Zabbix host {{ zh }}">
       <i class="mdi mdi-check-circle-outline"></i>
     </a>
   {% else %}
-    <span class="text-muted" aria-label="Nespárované so Zabbixom" title="Nespárované so Zabbixom">
+    <span class="text-muted" aria-label="Unmatched with Zabbix" title="Unmatched with Zabbix">
       <i class="mdi mdi-close-circle-outline"></i>
     </span>
   {% endif %}

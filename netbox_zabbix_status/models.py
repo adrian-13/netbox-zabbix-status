@@ -29,94 +29,94 @@ class ZabbixConfiguration(NetBoxModel):
     sync_interval = models.PositiveIntegerField(
         default=5,
         validators=[MinValueValidator(1)],
-        verbose_name='Interval syncu (min)',
-        help_text='Ako často sa sťahujú dáta zo Zabbixu. Zmena platí od najbližšieho '
-                  'behu — nevyžaduje reštart (sync job si po sebe prehodnotí vlastný '
-                  'interval).',
+        verbose_name='Sync interval (min)',
+        help_text='How often data is downloaded from Zabbix. The change takes effect '
+                  'from the next run — no restart required (the sync job re-evaluates '
+                  'its own interval).',
     )
     matching_enabled = models.BooleanField(
         default=True,
-        verbose_name='Párovanie s NetBoxom',
-        help_text='Vypnuté = čistý Zabbix viewer: sync prestane vytvárať nové väzby, '
-                  'dashboard a nastavenia sa prepnú na agregovaný pohľad. Panel/tab '
-                  '„Zabbix" na už spárovaných zariadeniach zostáva viditeľný.',
+        verbose_name='Matching with NetBox',
+        help_text='Disabled = pure Zabbix viewer: sync stops creating new links, '
+                  'the dashboard and settings switch to an aggregated view. The '
+                  '"Zabbix" panel/tab on already matched devices remains visible.',
     )
     match_by_ip = models.BooleanField(
         default=True,
-        verbose_name='Párovať aj podľa IP',
-        help_text='Fallback párovanie podľa jednoznačnej zhody IP adresy.',
+        verbose_name='Also match by IP',
+        help_text='Fallback matching based on an unambiguous IP address match.',
     )
     sync_vms = models.BooleanField(
         default=True,
-        verbose_name='Párovať aj virtuálne stroje',
+        verbose_name='Also match virtual machines',
     )
     hostname_strip_domains = models.JSONField(
         default=list, blank=True,
-        verbose_name='Odrezávané domény',
-        help_text='Doménové suffixy odrezané z mien pri párovaní.',
+        verbose_name='Stripped domains',
+        help_text='Domain suffixes stripped from names during matching.',
     )
     min_severity = models.PositiveSmallIntegerField(
         choices=SeverityChoices.CHOICES,
         default=SeverityChoices.WARNING,
-        verbose_name='Minimálna severita',
-        help_text='Problémy s nižšou severitou sa nesynchronizujú ani nezobrazujú. '
-                  'Prejaví sa pri ďalšom synce.',
+        verbose_name='Minimum severity',
+        help_text='Problems with lower severity are neither synced nor displayed. '
+                  'Takes effect on the next sync.',
     )
     include_suppressed = models.BooleanField(
         default=False,
-        verbose_name='Zahrnúť suppressed problémy',
-        help_text='Problémy hostov v maintenance okne. Zabbix UI ich defaultne '
-                  'skrýva — vypnuté = rovnaké správanie. Prejaví sa pri ďalšom synce.',
+        verbose_name='Include suppressed problems',
+        help_text='Problems for hosts in a maintenance window. The Zabbix UI hides '
+                  'them by default — disabled = same behavior. Takes effect on the next sync.',
     )
     cache_ttl = models.PositiveIntegerField(
         default=30,
-        verbose_name='Cache live dát (s)',
-        help_text='Ako dlho sa držia live problémy z API v cache pre tab na zariadení.',
+        verbose_name='Live data cache (s)',
+        help_text='How long live problems from the API are kept in cache for the device tab.',
     )
     dashboard_matched_only = models.BooleanField(
         default=True,
-        verbose_name='Dashboard len spárované hosty',
-        help_text='Vypnuté = dashboard zobrazuje všetky hosty zo Zabbixu.',
+        verbose_name='Dashboard matched hosts only',
+        help_text='Disabled = the dashboard shows all hosts from Zabbix.',
     )
     dashboard_severities = models.JSONField(
         default=list, blank=True,
-        verbose_name='Severity na dashboarde',
-        help_text='Ktoré severity zobrazovať v dlaždiciach a paneloch dashboardu. '
-                  'Prázdne = všetky od minimálnej severity.',
+        verbose_name='Severities on dashboard',
+        help_text='Which severities to show in the dashboard tiles and panels. '
+                  'Empty = all from the minimum severity.',
     )
     dashboard_refresh = models.PositiveIntegerField(
         default=60,
-        verbose_name='Auto-refresh dashboardu (s)',
-        help_text='0 = bez automatického obnovovania.',
+        verbose_name='Dashboard auto-refresh (s)',
+        help_text='0 = no automatic refresh.',
     )
     site_id_tag_key = models.CharField(
         max_length=64,
         default='nbx_siteid',
         blank=True,
-        verbose_name='Tag pre Site ID',
+        verbose_name='Tag for Site ID',
         help_text=(
-            'Kľúč Zabbix host tagu, ktorého hodnota je NetBox Site ID (napr. tag '
-            '"nbx_siteid" s hodnotou "63" znamená Site pk=63). Použije sa na '
-            'predvyplnenie Site pri importe nespárovaného hosta, má prednosť pred '
-            'odhadom podľa host group. Prázdne = vypnuté.'
+            'Zabbix host tag key whose value is the NetBox Site ID (e.g. the tag '
+            '"nbx_siteid" with value "63" means Site pk=63). Used to prefill the '
+            'Site when importing an unmatched host, takes precedence over the '
+            'host group-based guess. Empty = disabled.'
         ),
     )
     visible_tag_keys = models.JSONField(
         default=list, blank=True,
-        verbose_name='Zobrazované Zabbix tagy',
+        verbose_name='Displayed Zabbix tags',
         help_text=(
-            'Ktoré Zabbix tag kľúče zobrazovať v stĺpci „Zabbix tagy" na zozname Hostov '
-            '(nastavuje sa priamo tam, cez ikonu ozubeného kolieska — nie tu). '
-            'Prázdne = zobraziť všetky.'
+            'Which Zabbix tag keys to display in the "Zabbix tags" column on the '
+            'Hosts list (set directly there, via the gear icon — not here). '
+            'Empty = show all.'
         ),
     )
 
     class Meta:
-        verbose_name = 'Zabbix nastavenia'
-        verbose_name_plural = 'Zabbix nastavenia'
+        verbose_name = 'Zabbix settings'
+        verbose_name_plural = 'Zabbix settings'
 
     def __str__(self):
-        return 'Zabbix nastavenia'
+        return 'Zabbix settings'
 
     def get_absolute_url(self):
         return reverse('plugins:netbox_zabbix_status:settings')
@@ -156,7 +156,7 @@ class ZabbixHost(NetBoxModel):
     """
 
     zabbix_hostid = models.PositiveBigIntegerField(unique=True)
-    name = models.CharField(max_length=200, help_text='Technické meno hosta v Zabbixe')
+    name = models.CharField(max_length=200, help_text='Technical name of the host in Zabbix')
     visible_name = models.CharField(max_length=200, blank=True)
     device = models.ForeignKey(
         to='dcim.Device',
@@ -192,18 +192,18 @@ class ZabbixHost(NetBoxModel):
     )
     active_available = models.CharField(
         max_length=10, choices=AvailabilityChoices, default=AvailabilityChoices.UNKNOWN,
-        help_text='Dostupnosť aktívneho agenta (Zabbix >= 6.2)',
+        help_text='Availability of the active agent (Zabbix >= 6.2)',
     )
     proxy_name = models.CharField(max_length=200, blank=True)
     host_groups = models.JSONField(default=list, blank=True)
     templates = models.JSONField(default=list, blank=True)
     zabbix_tags = models.JSONField(
         default=list, blank=True,
-        help_text='Zabbix host tagy (key/value) — zdroj napr. pre nbx_siteid pri importe.',
+        help_text='Zabbix host tags (key/value) — source e.g. for nbx_siteid during import.',
     )
     interfaces = models.JSONField(
         default=list, blank=True,
-        help_text='Zabbix interfejsy (typ, ip, dns, port) — zdroj pre IP párovanie',
+        help_text='Zabbix interfaces (type, ip, dns, port) — source for IP matching',
     )
     match_method = models.CharField(
         max_length=20,
@@ -250,7 +250,7 @@ class ZabbixHost(NetBoxModel):
         super().clean()
         if self.device and self.virtual_machine:
             raise ValidationError(
-                'Zabbix host môže byť priradený buď k zariadeniu, alebo k VM, nie k obom.'
+                'A Zabbix host can be assigned to either a device or a VM, not both.'
             )
 
     def get_absolute_url(self):
@@ -321,9 +321,9 @@ class ZabbixProblem(NetBoxModel):
     zabbix_eventid = models.PositiveBigIntegerField(unique=True)
     zabbix_triggerid = models.PositiveBigIntegerField(
         null=True, blank=True,
-        help_text='ID triggera v Zabbixe — spolu s eventid tvorí priamy odkaz na '
-                  'problém (tr_events.php). Prázdne u záznamov spred tohto poľa, '
-                  'doplní sa pri najbližšom synce.',
+        help_text='Trigger ID in Zabbix — together with eventid forms a direct link '
+                  'to the problem (tr_events.php). Empty for records predating this '
+                  'field, filled in on the next sync.',
     )
     name = models.CharField(max_length=500)
     severity = models.PositiveSmallIntegerField(
@@ -333,7 +333,7 @@ class ZabbixProblem(NetBoxModel):
     acknowledged = models.BooleanField(default=False)
     suppressed = models.BooleanField(
         default=False,
-        help_text='Problém hosta v maintenance okne (Zabbix ho potláča)',
+        help_text='Problem for a host in a maintenance window (suppressed by Zabbix)',
     )
     started = models.DateTimeField(null=True, blank=True)
     opdata = models.CharField(max_length=500, blank=True)

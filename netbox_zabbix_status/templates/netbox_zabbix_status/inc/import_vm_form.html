@@ -17,30 +17,30 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Virtual Machine.
       {% include 'htmx/form.html' with form=vm_form %}
     </div>
     {% if has_ip %}
-      <h2 class="card-header">Sieťové pripojenie</h2>
+      <h2 class="card-header">Network connection</h2>
       <div class="card-body">
         <div class="row">
           <div class="col col-12 col-lg-6">
-            <h5 class="text-muted">Loopback rozhranie</h5>
+            <h5 class="text-muted">Loopback interface</h5>
             {% render_field vmiface_form.name %}
             {% render_field vmiface_form.enabled %}
           </div>
           <div class="col col-12 col-lg-6">
-            <h5 class="text-muted">IP adresa</h5>
+            <h5 class="text-muted">IP address</h5>
             {% render_field vmip_form.address %}
             {% render_field vmip_form.status %}
             {% render_field vmip_form.primary_for_parent %}
           </div>
         </div>
         <div class="form-text">
-          Vymaž adresu vyššie, ak nechceš vytvárať loopback rozhranie
-          ani IP — vznikne len samotné VM.
+          Clear the address above if you don't want to create a loopback
+          interface or IP — only the VM itself will be created.
         </div>
       </div>
     {% endif %}
     <div class="card-body">
       <button type="submit" class="btn btn-primary">
-        <i class="mdi mdi-plus"></i> Vytvoriť VM{% if has_ip %} + rozhranie + IP{% endif %}
+        <i class="mdi mdi-plus"></i> Create VM{% if has_ip %} + interface + IP{% endif %}
       </button>
     </div>
   </div>

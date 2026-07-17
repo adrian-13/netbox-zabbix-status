@@ -3,13 +3,13 @@
 
 {% block content %}
   {% if not zabbix_host %}
-    <div class="alert alert-info">Tento objekt nie je spárovaný so žiadnym Zabbix hostom.</div>
+    <div class="alert alert-info">This object is not matched with any Zabbix host.</div>
   {% else %}
     {% if live_error %}
       <div class="alert alert-warning">
         <i class="mdi mdi-alert"></i>
-        Zabbix API je nedostupné — zobrazený je posledný známy stav
-        (sync pred {{ zabbix_host.last_synced|timesince }}).
+        Zabbix API is unavailable — showing the last known status
+        (synced {{ zabbix_host.last_synced|timesince }} ago).
         <div class="small text-muted">{{ live_error }}</div>
       </div>
     {% endif %}
@@ -19,11 +19,11 @@
           <h2 class="card-header">Zabbix host</h2>
           <table class="table table-hover attr-table">
             <tr>
-              <th scope="row">Meno</th>
+              <th scope="row">Display name</th>
               <td>{{ zabbix_host.visible_name|default:zabbix_host.name }}</td>
             </tr>
             <tr>
-              <th scope="row">Technické meno</th>
+              <th scope="row">Name</th>
               <td><code>{{ zabbix_host.name }}</code></td>
             </tr>
             <tr>
@@ -31,14 +31,14 @@
               <td>{{ zabbix_host.zabbix_hostid }}</td>
             </tr>
             <tr>
-              <th scope="row">Stav</th>
+              <th scope="row">Status</th>
               <td>
                 {% badge zabbix_host.get_status_display bg_color=zabbix_host.get_status_color %}
                 {% if zabbix_host.in_maintenance %}{% badge "Maintenance" bg_color="orange" %}{% endif %}
               </td>
             </tr>
             <tr>
-              <th scope="row">Párovanie</th>
+              <th scope="row">Matching</th>
               <td>{% badge zabbix_host.get_match_method_display bg_color=zabbix_host.get_match_method_color %}</td>
             </tr>
             {% if zabbix_host.proxy_name %}
@@ -52,18 +52,18 @@
               <td>{{ zabbix_host.host_groups|join:", "|placeholder }}</td>
             </tr>
             <tr>
-              <th scope="row">Šablóny</th>
+              <th scope="row">Templates</th>
               <td>{{ zabbix_host.templates|join:", "|placeholder }}</td>
             </tr>
             <tr>
-              <th scope="row">Posledný sync</th>
-              <td><span title="{{ zabbix_host.last_synced }}">pred {{ zabbix_host.last_synced|timesince }}</span></td>
+              <th scope="row">Last synced</th>
+              <td><span title="{{ zabbix_host.last_synced }}">{{ zabbix_host.last_synced|timesince }} ago</span></td>
             </tr>
           </table>
           {% if zabbix_links %}
             <div class="card-body">
               <a href="{{ zabbix_links.problems }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                <i class="mdi mdi-open-in-new"></i> Problémy
+                <i class="mdi mdi-open-in-new"></i> Problems
               </a>
               <a href="{{ zabbix_links.latest }}" target="_blank" class="btn btn-sm btn-outline-primary">
                 <i class="mdi mdi-open-in-new"></i> Latest data
@@ -75,10 +75,10 @@
           {% endif %}
         </div>
         <div class="card">
-          <h2 class="card-header">Interfejsy</h2>
+          <h2 class="card-header">Interfaces</h2>
           <table class="table table-hover">
             <thead>
-              <tr><th>Typ</th><th>Adresa</th><th>Port</th></tr>
+              <tr><th>Type</th><th>Address</th><th>Port</th></tr>
             </thead>
             <tbody>
               {% for iface in zabbix_host.interfaces %}
@@ -90,7 +90,7 @@
                   <td>{{ iface.port }}</td>
                 </tr>
               {% empty %}
-                <tr><td colspan="3" class="text-muted">Žiadne interfejsy</td></tr>
+                <tr><td colspan="3" class="text-muted">No interfaces</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -99,20 +99,20 @@
       <div class="col col-12 col-xl-7">
         <div class="card">
           <h2 class="card-header">
-            Aktívne problémy
+            Active problems
             {% if is_live %}
-              <span class="badge text-bg-green ms-2" title="Dáta priamo zo Zabbix API">live</span>
+              <span class="badge text-bg-green ms-2" title="Data directly from the Zabbix API">live</span>
             {% else %}
-              <span class="badge text-bg-secondary ms-2" title="Dáta z posledného syncu">snapshot</span>
+              <span class="badge text-bg-secondary ms-2" title="Data from the last sync">snapshot</span>
             {% endif %}
           </h2>
           <table class="table table-hover">
             <thead>
               <tr>
-                <th>Severita</th>
-                <th>Problém</th>
-                <th>Od</th>
-                <th>Trvanie</th>
+                <th>Severity</th>
+                <th>Problem</th>
+                <th>Since</th>
+                <th>Duration</th>
                 <th>Ack</th>
                 <th></th>
               </tr>
@@ -123,7 +123,7 @@
                   <td>{% badge p.severity_label bg_color=p.severity_color %}</td>
                   <td>
                     {{ p.name }}
-                    {% if p.suppressed %}<i class="mdi mdi-volume-off text-muted" title="Suppressed — host je v maintenance"></i>{% endif %}
+                    {% if p.suppressed %}<i class="mdi mdi-volume-off text-muted" title="Suppressed — host is in maintenance"></i>{% endif %}
                     {% if p.opdata %}<div class="small text-muted">{{ p.opdata }}</div>{% endif %}
                   </td>
                   <td><span title="{{ p.started }}">{{ p.started|date:"SHORT_DATETIME_FORMAT" }}</span></td>
@@ -132,12 +132,12 @@
                     {% if p.acknowledged %}
                       <i class="mdi mdi-check-circle text-success" title="Acknowledged"></i>
                     {% else %}
-                      <i class="mdi mdi-circle-outline text-muted" title="Neacknowledgnuté"></i>
+                      <i class="mdi mdi-circle-outline text-muted" title="Not acknowledged"></i>
                     {% endif %}
                   </td>
                   <td>
                     {% if p.zabbix_url %}
-                      <a href="{{ p.zabbix_url }}" target="_blank" title="Otvoriť problém v Zabbixe">
+                      <a href="{{ p.zabbix_url }}" target="_blank" title="Open problem in Zabbix">
                         <i class="mdi mdi-open-in-new"></i>
                       </a>
                     {% endif %}
@@ -146,7 +146,7 @@
               {% empty %}
                 <tr>
                   <td colspan="6" class="text-muted">
-                    <i class="mdi mdi-check-circle text-success"></i> Žiadne aktívne problémy
+                    <i class="mdi mdi-check-circle text-success"></i> No active problems
                   </td>
                 </tr>
               {% endfor %}

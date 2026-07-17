@@ -46,7 +46,7 @@ class ZabbixSyncJob(JobRunner):
         if not cfg.get('api_url') or not cfg.get('api_token'):
             # Nenakonfigurovaný plugin nie je chyba — job prebehne naprázdno,
             # aby Background Tasks nezaplavili errory.
-            self.job.data = {'skipped': 'chýba ZABBIX_API_URL / ZABBIX_API_TOKEN'}
+            self.job.data = {'skipped': 'missing ZABBIX_API_URL / ZABBIX_API_TOKEN'}
         else:
             self.job.data = run_sync()
 

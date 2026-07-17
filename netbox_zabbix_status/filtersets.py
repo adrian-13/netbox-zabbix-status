@@ -22,11 +22,11 @@ class ZabbixHostFilterSet(NetBoxModelFilterSet):
     match_method = django_filters.MultipleChoiceFilter(choices=MatchMethodChoices)
     agent_available = django_filters.MultipleChoiceFilter(choices=AvailabilityChoices)
     snmp_available = django_filters.MultipleChoiceFilter(choices=AvailabilityChoices)
-    is_matched = django_filters.BooleanFilter(method='filter_is_matched', label='Spárované')
-    has_problems = django_filters.BooleanFilter(method='filter_has_problems', label='Má problémy')
+    is_matched = django_filters.BooleanFilter(method='filter_is_matched', label='Matched')
+    has_problems = django_filters.BooleanFilter(method='filter_has_problems', label='Has problems')
     max_severity = django_filters.MultipleChoiceFilter(choices=SeverityChoices.CHOICES)
     device_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Device.objects.all(), label='Zariadenie (ID)'
+        queryset=Device.objects.all(), label='Device (ID)'
     )
     virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(), label='VM (ID)'
@@ -38,7 +38,7 @@ class ZabbixHostFilterSet(NetBoxModelFilterSet):
         method='filter_tenant', queryset=Tenant.objects.all(), label='Tenant (ID)'
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
-        method='filter_role', queryset=DeviceRole.objects.all(), label='Rola (ID)'
+        method='filter_role', queryset=DeviceRole.objects.all(), label='Role (ID)'
     )
 
     class Meta:
@@ -91,7 +91,7 @@ class ZabbixProblemFilterSet(NetBoxModelFilterSet):
         queryset=ZabbixHost.objects.all(), label='Zabbix host (ID)'
     )
     device_id = django_filters.ModelMultipleChoiceFilter(
-        field_name='host__device', queryset=Device.objects.all(), label='Zariadenie (ID)'
+        field_name='host__device', queryset=Device.objects.all(), label='Device (ID)'
     )
     virtual_machine_id = django_filters.ModelMultipleChoiceFilter(
         field_name='host__virtual_machine', queryset=VirtualMachine.objects.all(), label='VM (ID)'
@@ -103,7 +103,7 @@ class ZabbixProblemFilterSet(NetBoxModelFilterSet):
         method='filter_tenant', queryset=Tenant.objects.all(), label='Tenant (ID)'
     )
     role_id = django_filters.ModelMultipleChoiceFilter(
-        method='filter_role', queryset=DeviceRole.objects.all(), label='Rola (ID)'
+        method='filter_role', queryset=DeviceRole.objects.all(), label='Role (ID)'
     )
 
     class Meta:
@@ -162,7 +162,7 @@ def _filter_device_zabbix_matched(queryset, name, value):
 # Zodpovedajúce pole vo FilterForme je vo .forms (rovnaké meno 'zabbix_matched').
 DeviceFilterSet.declared_filters['zabbix_matched'] = django_filters.BooleanFilter(
     method=_filter_device_zabbix_matched,
-    label='Spárované so Zabbixom',
+    label='Matched with Zabbix',
 )
 
 
@@ -178,5 +178,5 @@ def _filter_vm_zabbix_matched(queryset, name, value):
 # je v .forms (rovnaké meno 'zabbix_matched').
 VirtualMachineFilterSet.declared_filters['zabbix_matched'] = django_filters.BooleanFilter(
     method=_filter_vm_zabbix_matched,
-    label='Spárované so Zabbixom',
+    label='Matched with Zabbix',
 )

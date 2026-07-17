@@ -11,8 +11,8 @@ from .models import ZabbixHost, ZabbixProblem
 
 @register_widget
 class ZabbixProblemsWidget(DashboardWidget):
-    default_title = 'Zabbix problémy'
-    description = 'Aktívne Zabbix problémy podľa severity'
+    default_title = 'Zabbix Problems'
+    description = 'Active Zabbix problems by severity'
 
     def render(self, request):
         counts = dict(

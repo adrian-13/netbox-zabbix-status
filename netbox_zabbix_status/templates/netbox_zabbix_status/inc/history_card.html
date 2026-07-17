@@ -6,7 +6,7 @@ history_custom_from, history_custom_till, history_error, history_rows,
 history_truncated.
 {% endcomment %}
 <div class="card">
-  <h2 class="card-header">História problémov</h2>
+  <h2 class="card-header">Problem history</h2>
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-center gap-2">
       <div class="btn-group btn-group-sm" role="group">
@@ -21,11 +21,11 @@ history_truncated.
         <span class="text-muted small">–</span>
         <input type="datetime-local" name="till" value="{{ history_custom_till }}"
                class="form-control form-control-sm" style="width: auto;">
-        <button type="submit" class="btn btn-sm btn-outline-primary">Zobraziť</button>
+        <button type="submit" class="btn btn-sm btn-outline-primary">View</button>
       </form>
     </div>
     <div class="form-text mt-1">
-      Vlastný rozsah je v UTC · zobrazené sú problémy, ktoré vznikli vo zvolenom období
+      Custom range is in UTC · showing problems that started within the selected period
     </div>
   </div>
   {% if history_error %}
@@ -36,10 +36,10 @@ history_truncated.
     <table class="table table-hover">
       <thead>
         <tr>
-          <th>Severita</th>
-          <th>Problém</th>
-          <th>Od</th>
-          <th>Do</th>
+          <th>Severity</th>
+          <th>Problem</th>
+          <th>From</th>
+          <th>To</th>
           <th>Ack</th>
           <th></th>
         </tr>
@@ -53,9 +53,9 @@ history_truncated.
             <td>
               {% if row.resolved %}
                 <span title="{{ row.ended }}">{{ row.ended|date:"SHORT_DATETIME_FORMAT" }}</span>
-                <div class="small text-muted">trvanie {{ row.started|timesince:row.ended }}</div>
+                <div class="small text-muted">duration {{ row.started|timesince:row.ended }}</div>
               {% else %}
-                {% badge "prebieha" bg_color="orange" %}
+                {% badge "ongoing" bg_color="orange" %}
                 <div class="small text-muted">{{ row.started|timesince }}</div>
               {% endif %}
             </td>
@@ -63,12 +63,12 @@ history_truncated.
               {% if row.acknowledged %}
                 <i class="mdi mdi-check-circle text-success" title="Acknowledged"></i>
               {% else %}
-                <i class="mdi mdi-circle-outline text-muted" title="Neacknowledgnuté"></i>
+                <i class="mdi mdi-circle-outline text-muted" title="Not acknowledged"></i>
               {% endif %}
             </td>
             <td>
               {% if row.zabbix_url %}
-                <a href="{{ row.zabbix_url }}" target="_blank" title="Otvoriť problém v Zabbixe">
+                <a href="{{ row.zabbix_url }}" target="_blank" title="Open problem in Zabbix">
                   <i class="mdi mdi-open-in-new"></i>
                 </a>
               {% endif %}
@@ -76,7 +76,7 @@ history_truncated.
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6" class="text-muted">Žiadne problémy v tomto období</td>
+            <td colspan="6" class="text-muted">No problems in this period</td>
           </tr>
         {% endfor %}
       </tbody>
@@ -84,7 +84,7 @@ history_truncated.
     {% if history_truncated %}
       <div class="card-body text-muted small border-top">
         <i class="mdi mdi-information-outline"></i>
-        Zobrazených posledných {{ history_rows|length }} udalostí — zúž rozsah pre kompletný výpis.
+        Showing the last {{ history_rows|length }} events — narrow the range for a complete list.
       </div>
     {% endif %}
   {% endif %}

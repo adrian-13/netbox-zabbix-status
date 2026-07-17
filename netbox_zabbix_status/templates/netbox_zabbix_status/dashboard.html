@@ -8,13 +8,13 @@
     {% if perms.netbox_zabbix_status.change_zabbixconfiguration %}
       <div class="dropdown d-inline">
         <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"
-                data-bs-auto-close="outside" aria-expanded="false" title="Nastavenie dashboardu">
+                data-bs-auto-close="outside" aria-expanded="false" title="Dashboard settings">
           <i class="mdi mdi-cog"></i>
         </button>
         <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 230px;">
           <form method="post" action="{% url 'plugins:netbox_zabbix_status:dashboard_severities' %}">
             {% csrf_token %}
-            <h6 class="dropdown-header px-0">Zobrazované severity</h6>
+            <h6 class="dropdown-header px-0">Displayed severities</h6>
             {% for opt in severity_options %}
               <label class="form-check mb-1">
                 <input type="checkbox" class="form-check-input" name="severities"
@@ -24,12 +24,12 @@
                 </span>
               </label>
             {% endfor %}
-            <div class="form-text">Nič nevybrané = všetky od min. severity</div>
-            <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Uložiť</button>
+            <div class="form-text">Nothing selected = all from min. severity</div>
+            <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Save</button>
           </form>
           <div class="dropdown-divider"></div>
           <a href="{% url 'plugins:netbox_zabbix_status:settings' %}" class="dropdown-item px-0 small">
-            <i class="mdi mdi-tune"></i> Všetky nastavenia…
+            <i class="mdi mdi-tune"></i> All settings…
           </a>
         </div>
       </div>
@@ -37,13 +37,13 @@
     <form method="post" action="{% url 'plugins:netbox_zabbix_status:refresh' %}" class="d-inline">
       {% csrf_token %}
       <input type="hidden" name="return_url" value="{{ request.path }}">
-      <button type="submit" class="btn btn-outline-secondary" title="Spustí okamžitý sync zo Zabbixu">
-        <i class="mdi mdi-refresh"></i> Obnoviť zo Zabbixu
+      <button type="submit" class="btn btn-outline-secondary" title="Triggers an immediate sync from Zabbix">
+        <i class="mdi mdi-refresh"></i> Refresh from Zabbix
       </button>
     </form>
     {% if web_url %}
       <a href="{{ web_url }}" target="_blank" class="btn btn-outline-primary">
-        <i class="mdi mdi-open-in-new"></i> Otvoriť Zabbix
+        <i class="mdi mdi-open-in-new"></i> Open Zabbix
       </a>
     {% endif %}
   </div>
@@ -53,8 +53,8 @@
   {% if sync_stale %}
     <div class="alert alert-warning">
       <i class="mdi mdi-alert"></i>
-      Dáta môžu byť neaktuálne — posledný sync prebehol pred {{ last_synced|timesince }}.
-      Skontroluj system job „Zabbix sync" v Background Tasks.
+      Data may be outdated — the last sync ran {{ last_synced|timesince }} ago.
+      Check the "Zabbix sync" system job in Background Tasks.
     </div>
   {% endif %}
 
@@ -98,10 +98,10 @@
     <div class="col col-12 col-xl-5">
       <div class="card">
         <h2 class="card-header">
-          Hostia s problémami
+          Hosts with problems
           <div class="card-actions">
             <a href="{{ hosts_url }}{{ hosts_scope_qs }}has_problems=true" class="btn btn-ghost-primary btn-sm">
-              Všetci <i class="mdi mdi-arrow-right"></i>
+              All <i class="mdi mdi-arrow-right"></i>
             </a>
           </div>
         </h2>
@@ -110,8 +110,8 @@
             <tr>
               <th>Host</th>
               <th>Site</th>
-              <th>Dostupnosť</th>
-              <th class="text-end">Problémy</th>
+              <th>Availability</th>
+              <th class="text-end">Problems</th>
             </tr>
           </thead>
           <tbody>
@@ -132,7 +132,7 @@
                     <span class="badge text-bg-{% if h.snmp_available == 'up' %}green{% else %}red{% endif %}" title="SNMP">S</span>
                   {% endif %}
                   {% if h.in_maintenance %}
-                    <span class="badge text-bg-orange" title="V maintenance okne"><i class="mdi mdi-wrench"></i></span>
+                    <span class="badge text-bg-orange" title="In maintenance window"><i class="mdi mdi-wrench"></i></span>
                   {% endif %}
                 </td>
                 <td class="text-end">
@@ -142,7 +142,7 @@
             {% empty %}
               <tr>
                 <td colspan="4" class="text-muted">
-                  <i class="mdi mdi-check-circle text-success"></i> Všetky spárované hosty sú bez problémov
+                  <i class="mdi mdi-check-circle text-success"></i> All matched hosts are free of problems
                 </td>
               </tr>
             {% endfor %}
@@ -155,21 +155,21 @@
     <div class="col col-12 col-xl-7">
       <div class="card">
         <h2 class="card-header">
-          Aktívne problémy
+          Active problems
           <span class="badge text-bg-secondary ms-2">{{ problems_total }}</span>
           <div class="card-actions">
             <a href="{{ problems_url }}" class="btn btn-ghost-primary btn-sm">
-              Všetky <i class="mdi mdi-arrow-right"></i>
+              All <i class="mdi mdi-arrow-right"></i>
             </a>
           </div>
         </h2>
         <table class="table table-hover">
           <thead>
             <tr>
-              <th>Severita</th>
-              <th>Trvanie</th>
+              <th>Severity</th>
+              <th>Duration</th>
               <th>Host</th>
-              <th>Problém</th>
+              <th>Problem</th>
               <th>Ack</th>
               <th></th>
             </tr>
@@ -188,19 +188,19 @@
                 </td>
                 <td>
                   {{ p.name }}
-                  {% if p.suppressed %}<i class="mdi mdi-volume-off text-muted" title="Suppressed — host je v maintenance"></i>{% endif %}
+                  {% if p.suppressed %}<i class="mdi mdi-volume-off text-muted" title="Suppressed — host is in maintenance"></i>{% endif %}
                   {% if p.opdata %}<div class="small text-muted">{{ p.opdata }}</div>{% endif %}
                 </td>
                 <td>
                   {% if p.acknowledged %}
                     <i class="mdi mdi-check-circle text-success" title="Acknowledged"></i>
                   {% else %}
-                    <i class="mdi mdi-circle-outline text-muted" title="Neacknowledgnuté"></i>
+                    <i class="mdi mdi-circle-outline text-muted" title="Not acknowledged"></i>
                   {% endif %}
                 </td>
                 <td>
                   {% if p.get_zabbix_url %}
-                    <a href="{{ p.get_zabbix_url }}" target="_blank" title="Otvoriť problém v Zabbixe">
+                    <a href="{{ p.get_zabbix_url }}" target="_blank" title="Open problem in Zabbix">
                       <i class="mdi mdi-open-in-new"></i>
                     </a>
                   {% endif %}
@@ -209,7 +209,7 @@
             {% empty %}
               <tr>
                 <td colspan="6" class="text-muted">
-                  <i class="mdi mdi-check-circle text-success"></i> Žiadne aktívne problémy
+                  <i class="mdi mdi-check-circle text-success"></i> No active problems
                 </td>
               </tr>
             {% endfor %}
@@ -221,9 +221,9 @@
 
   <div class="text-muted small mt-2">
     <i class="mdi mdi-sync"></i>
-    Posledný sync: {% if last_synced %}<span title="{{ last_synced }}">pred {{ last_synced|timesince }}</span>{% else %}zatiaľ žiadny{% endif %}
+    Last synced: {% if last_synced %}<span title="{{ last_synced }}">{{ last_synced|timesince }} ago</span>{% else %}none yet{% endif %}
     · {{ scope_note }}
-    {% if refresh %}· stránka sa obnovuje každých {{ refresh }} s{% endif %}
+    {% if refresh %}· page refreshes every {{ refresh }} s{% endif %}
   </div>
 
   {% if refresh %}

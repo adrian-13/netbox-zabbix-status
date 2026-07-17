@@ -15,8 +15,8 @@ from .models import ZabbixConfiguration, ZabbixHost, ZabbixProblem
 
 BOOLEAN_CHOICES = (
     ('', '---------'),
-    ('true', 'Áno'),
-    ('false', 'Nie'),
+    ('true', 'Yes'),
+    ('false', 'No'),
 )
 
 
@@ -25,9 +25,9 @@ class ZabbixSettingsForm(forms.ModelForm):
 
     strip_domains = forms.CharField(
         required=False,
-        label='Odrezávané domény',
-        help_text='Čiarkou oddelené doménové suffixy odrezávané pri párovaní mien, '
-                  'napr. „kinet.sk, firma.local".',
+        label='Stripped domains',
+        help_text='Comma-separated domain suffixes stripped when matching names, '
+                  'e.g. "kinet.sk, firma.local".',
     )
     # dashboard_severities sa edituje priamo z gear dropdownu na dashboarde
     # (DashboardSeveritiesView), visible_tag_keys rovnako z gear dropdownu na
@@ -77,14 +77,14 @@ class ZabbixHostAssignForm(NetBoxModelForm):
     """
 
     device = DynamicModelChoiceField(
-        queryset=Device.objects.all(), required=False, label='Zariadenie'
+        queryset=Device.objects.all(), required=False, label='Device'
     )
     virtual_machine = DynamicModelChoiceField(
-        queryset=VirtualMachine.objects.all(), required=False, label='Virtuálny stroj'
+        queryset=VirtualMachine.objects.all(), required=False, label='Virtual Machine'
     )
 
     fieldsets = (
-        FieldSet('device', 'virtual_machine', name='Priradenie'),
+        FieldSet('device', 'virtual_machine', name='Assignment'),
     )
 
     class Meta:
@@ -104,9 +104,9 @@ class ZabbixHostAssignForm(NetBoxModelForm):
         device = cleaned_data.get('device')
         vm = cleaned_data.get('virtual_machine')
         if device and ZabbixHost.objects.filter(device=device).exclude(pk=self.instance.pk).exists():
-            self.add_error('device', 'Toto zariadenie je už spárované s iným Zabbix hostom.')
+            self.add_error('device', 'This device is already matched with another Zabbix host.')
         if vm and ZabbixHost.objects.filter(virtual_machine=vm).exclude(pk=self.instance.pk).exists():
-            self.add_error('virtual_machine', 'Tento virtuálny stroj je už spárovaný s iným Zabbix hostom.')
+            self.add_error('virtual_machine', 'This virtual machine is already matched with another Zabbix host.')
         return cleaned_data
 
     def save(self, *args, **kwargs):
@@ -126,12 +126,12 @@ class ZabbixHostFilterForm(NetBoxModelFilterSetForm):
         FieldSet('site_id', 'tenant_id', 'role_id', name='NetBox'),
     )
 
-    status = forms.MultipleChoiceField(choices=ZabbixHostStatusChoices, required=False, label='Stav')
-    match_method = forms.MultipleChoiceField(choices=MatchMethodChoices, required=False, label='Párovanie')
-    is_matched = forms.ChoiceField(choices=BOOLEAN_CHOICES, required=False, label='Spárované')
-    has_problems = forms.ChoiceField(choices=BOOLEAN_CHOICES, required=False, label='Má problémy')
+    status = forms.MultipleChoiceField(choices=ZabbixHostStatusChoices, required=False, label='Status')
+    match_method = forms.MultipleChoiceField(choices=MatchMethodChoices, required=False, label='Matching')
+    is_matched = forms.ChoiceField(choices=BOOLEAN_CHOICES, required=False, label='Matched')
+    has_problems = forms.ChoiceField(choices=BOOLEAN_CHOICES, required=False, label='Has problems')
     max_severity = forms.MultipleChoiceField(
-        choices=SeverityChoices.CHOICES, required=False, label='Max. severita'
+        choices=SeverityChoices.CHOICES, required=False, label='Max. severity'
     )
     site_id = DynamicModelMultipleChoiceField(
         queryset=Site.objects.all(), required=False, label='Site'
@@ -140,7 +140,7 @@ class ZabbixHostFilterForm(NetBoxModelFilterSetForm):
         queryset=Tenant.objects.all(), required=False, label='Tenant'
     )
     role_id = DynamicModelMultipleChoiceField(
-        queryset=DeviceRole.objects.all(), required=False, label='Rola'
+        queryset=DeviceRole.objects.all(), required=False, label='Role'
     )
 
 
@@ -153,7 +153,7 @@ class ZabbixProblemFilterForm(NetBoxModelFilterSetForm):
     )
 
     severity = forms.MultipleChoiceField(
-        choices=SeverityChoices.CHOICES, required=False, label='Severita'
+        choices=SeverityChoices.CHOICES, required=False, label='Severity'
     )
     acknowledged = forms.ChoiceField(choices=BOOLEAN_CHOICES, required=False, label='Acknowledged')
     site_id = DynamicModelMultipleChoiceField(
@@ -163,7 +163,7 @@ class ZabbixProblemFilterForm(NetBoxModelFilterSetForm):
         queryset=Tenant.objects.all(), required=False, label='Tenant'
     )
     role_id = DynamicModelMultipleChoiceField(
-        queryset=DeviceRole.objects.all(), required=False, label='Rola'
+        queryset=DeviceRole.objects.all(), required=False, label='Role'
     )
 
 
@@ -179,7 +179,7 @@ class ZabbixProblemFilterForm(NetBoxModelFilterSetForm):
 # na tom istom formulári (dcim/forms/filtersets.py).
 DeviceFilterForm.base_fields['zabbix_matched'] = forms.NullBooleanField(
     required=False,
-    label='Spárované so Zabbixom',
+    label='Matched with Zabbix',
     widget=forms.Select(choices=BOOLEAN_WITH_BLANK_CHOICES),
 )
 DeviceFilterForm.fieldsets = DeviceFilterForm.fieldsets + (
@@ -191,7 +191,7 @@ DeviceFilterForm.fieldsets = DeviceFilterForm.fieldsets + (
 # na natívnom VirtualMachineFilterForm (Filters tab na zozname Virtual Machines).
 VirtualMachineFilterForm.base_fields['zabbix_matched'] = forms.NullBooleanField(
     required=False,
-    label='Spárované so Zabbixom',
+    label='Matched with Zabbix',
     widget=forms.Select(choices=BOOLEAN_WITH_BLANK_CHOICES),
 )
 VirtualMachineFilterForm.fieldsets = VirtualMachineFilterForm.fieldsets + (

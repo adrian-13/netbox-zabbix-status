@@ -39,7 +39,7 @@ def get_client() -> ZabbixAPI:
     cfg = get_config()
     if not cfg.get('api_url') or not cfg.get('api_token'):
         raise ZabbixConfigError(
-            "Nastav 'api_url' a 'api_token' v PLUGINS_CONFIG['netbox_zabbix_status'] "
+            "Set 'api_url' and 'api_token' in PLUGINS_CONFIG['netbox_zabbix_status'] "
             '(env ZABBIX_API_URL / ZABBIX_API_TOKEN).'
         )
     return ZabbixAPI(

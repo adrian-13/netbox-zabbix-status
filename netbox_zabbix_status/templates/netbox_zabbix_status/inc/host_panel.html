@@ -13,14 +13,14 @@
   {% if zabbix_host %}
     <table class="table table-hover attr-table">
       <tr>
-        <th scope="row">Stav hosta</th>
+        <th scope="row">Host status</th>
         <td>
           {% badge zabbix_host.get_status_display bg_color=zabbix_host.get_status_color %}
           {% if zabbix_host.in_maintenance %}{% badge "Maintenance" bg_color="orange" %}{% endif %}
         </td>
       </tr>
       <tr>
-        <th scope="row">Problémy</th>
+        <th scope="row">Problems</th>
         <td>
           {% if zabbix_host.problem_count %}
             {% badge zabbix_host.problem_count bg_color=zabbix_host.get_max_severity_color %}
@@ -56,7 +56,7 @@
       {% endif %}
       {% if zabbix_host.active_available != 'unknown' %}
         <tr>
-          <th scope="row">Aktívny agent</th>
+          <th scope="row">Active agent</th>
           <td>
             {% if zabbix_host.active_available == 'up' %}
               {% badge "Up" bg_color="green" %}
@@ -69,9 +69,9 @@
       <tr>
         <th scope="row">Sync</th>
         <td>
-          <span title="{{ zabbix_host.last_synced }}">pred {{ zabbix_host.last_synced|timesince }}</span>
+          <span title="{{ zabbix_host.last_synced }}">{{ zabbix_host.last_synced|timesince }} ago</span>
           {% if zabbix_dashboard_url %}
-            <a href="{{ zabbix_dashboard_url }}" target="_blank" class="float-end" title="Otvoriť v Zabbixe">
+            <a href="{{ zabbix_dashboard_url }}" target="_blank" class="float-end" title="Open in Zabbix">
               <i class="mdi mdi-open-in-new"></i>
             </a>
           {% endif %}
@@ -80,7 +80,7 @@
     </table>
   {% else %}
     <div class="card-body text-muted">
-      <i class="mdi mdi-radar"></i> Nespárované so žiadnym Zabbix hostom
+      <i class="mdi mdi-radar"></i> Unmatched with any Zabbix host
     </div>
   {% endif %}
 </div>

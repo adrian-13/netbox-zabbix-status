@@ -2,12 +2,12 @@
 {% load helpers %}
 {% load form_helpers %}
 
-{% block title %}Importovať {{ host }}{% endblock %}
+{% block title %}Import {{ host }}{% endblock %}
 
 {% block content %}
   <div class="mb-3">
     <a href="{% url 'plugins:netbox_zabbix_status:zabbixhost_list' %}">
-      <i class="mdi mdi-arrow-left"></i> Späť na zoznam Hosty
+      <i class="mdi mdi-arrow-left"></i> Back to Host List
     </a>
   </div>
 
@@ -17,11 +17,11 @@
         <h2 class="card-header">Zabbix host</h2>
         <table class="table table-hover attr-table mb-0">
           <tr>
-            <th scope="row">Meno</th>
+            <th scope="row">Display name</th>
             <td>{{ host.visible_name|default:host.name }}</td>
           </tr>
           <tr>
-            <th scope="row">Technické meno</th>
+            <th scope="row">Name</th>
             <td><code>{{ host.name }}</code></td>
           </tr>
           <tr>
@@ -29,7 +29,7 @@
             <td>{{ host.host_groups|join:", "|placeholder }}</td>
           </tr>
           <tr>
-            <th scope="row">Šablóny</th>
+            <th scope="row">Templates</th>
             <td>{{ host.templates|join:", "|placeholder }}</td>
           </tr>
           <tr>
@@ -37,8 +37,8 @@
             <td>{{ host.proxy_name|placeholder }}</td>
           </tr>
           <tr>
-            <th scope="row">Posledný sync</th>
-            <td><span title="{{ host.last_synced }}">pred {{ host.last_synced|timesince }}</span></td>
+            <th scope="row">Last synced</th>
+            <td><span title="{{ host.last_synced }}">{{ host.last_synced|timesince }} ago</span></td>
           </tr>
         </table>
       </div>
@@ -46,10 +46,10 @@
 
     <div class="col col-12 col-md-6">
       <div class="card h-100">
-        <h2 class="card-header">Interfejsy</h2>
+        <h2 class="card-header">Interfaces</h2>
         <table class="table table-hover mb-0">
           <thead>
-            <tr><th>Typ</th><th>Adresa</th><th>Port</th></tr>
+            <tr><th>Type</th><th>Address</th><th>Port</th></tr>
           </thead>
           <tbody>
             {% for iface in host.interfaces %}
@@ -61,15 +61,15 @@
                 <td>{{ iface.port }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="3" class="text-muted">Žiadne interfejsy</td></tr>
+              <tr><td colspan="3" class="text-muted">No interfaces</td></tr>
             {% endfor %}
           </tbody>
         </table>
         {% if not has_ip %}
           <div class="card-body text-muted small">
             <i class="mdi mdi-information-outline"></i>
-            Žiadny interfejs nemá priamu IP adresu — nižšie sa vytvorí len
-            samotné zariadenie/VM, bez loopback rozhrania.
+            No interface has a direct IP address — only the device/VM
+            itself will be created below, without a loopback interface.
           </div>
         {% endif %}
       </div>
@@ -80,7 +80,7 @@
     <div class="col col-12">
       {% if not can_add_device and not can_add_vm %}
         <div class="alert alert-warning">
-          Nemáš oprávnenie na vytvorenie zariadenia ani VM.
+          You don't have permission to create a device or VM.
         </div>
       {% elif can_add_device and can_add_vm %}
         {# Oba typy dostupné — taby, aby dva plné formuláre neboli pod sebou #}
@@ -89,7 +89,7 @@
             <button class="nav-link active" id="import-tab-device" data-bs-toggle="tab"
                     data-bs-target="#import-pane-device" type="button" role="tab"
                     aria-controls="import-pane-device" aria-selected="true">
-              <i class="mdi mdi-router"></i> Zariadenie
+              <i class="mdi mdi-router"></i> Device
             </button>
           </li>
           <li class="nav-item" role="presentation">

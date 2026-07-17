@@ -6,7 +6,7 @@ __version__ = '0.6.0'
 class ZabbixStatusConfig(PluginConfig):
     name = 'netbox_zabbix_status'
     verbose_name = 'Zabbix Status'
-    description = 'Zobrazenie a import stavu Zabbix monitoringu v NetBoxe'
+    description = 'Display and import of Zabbix monitoring status in NetBox'
     version = __version__
     author = 'Adrián Javorček'
     author_email = 'adrian.javorcek@gmail.com'

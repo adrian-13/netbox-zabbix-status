@@ -16,13 +16,13 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
   {% csrf_token %}
   <input type="hidden" name="kind" value="device">
   <div class="card">
-    <h2 class="card-header">Zariadenie</h2>
+    <h2 class="card-header">Device</h2>
     <div class="card-body">
       {% for field in device_form.hidden_fields %}{{ field }}{% endfor %}
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Základné údaje</h5>
+          <h5 class="col-9 offset-3 text-muted">Basic information</h5>
         </div>
         {% render_field device_form.name %}
         {% render_field device_form.role %}
@@ -32,7 +32,7 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Hardvér</h5>
+          <h5 class="col-9 offset-3 text-muted">Hardware</h5>
         </div>
         {% render_field device_form.device_type %}
         {% render_field device_form.airflow %}
@@ -42,7 +42,7 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Umiestnenie</h5>
+          <h5 class="col-9 offset-3 text-muted">Location</h5>
         </div>
         {% render_field device_form.site %}
         {% render_field device_form.location %}
@@ -55,7 +55,7 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Správa</h5>
+          <h5 class="col-9 offset-3 text-muted">Management</h5>
         </div>
         {% render_field device_form.status %}
         {% render_field device_form.platform %}
@@ -64,14 +64,14 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Virtualizácia</h5>
+          <h5 class="col-9 offset-3 text-muted">Virtualization</h5>
         </div>
         {% render_field device_form.cluster %}
       </div>
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Nájomník</h5>
+          <h5 class="col-9 offset-3 text-muted">Tenant</h5>
         </div>
         {% render_field device_form.tenant_group %}
         {% render_field device_form.tenant %}
@@ -79,7 +79,7 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Virtuálne šasi</h5>
+          <h5 class="col-9 offset-3 text-muted">Virtual chassis</h5>
         </div>
         {% render_field device_form.virtual_chassis %}
         {% render_field device_form.vc_position %}
@@ -88,7 +88,7 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Vlastník</h5>
+          <h5 class="col-9 offset-3 text-muted">Owner</h5>
         </div>
         {% render_field device_form.owner_group %}
         {% render_field device_form.owner %}
@@ -97,7 +97,7 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
       {% if device_form.custom_fields %}
         <div class="field-group mb-4">
           <div class="row">
-            <h5 class="col-9 offset-3 text-muted">Vlastné polia</h5>
+            <h5 class="col-9 offset-3 text-muted">Custom fields</h5>
           </div>
           {% render_custom_fields device_form %}
         </div>
@@ -105,7 +105,7 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
 
       <div class="field-group mb-4">
         <div class="row">
-          <h5 class="col-9 offset-3 text-muted">Lokálny kontext</h5>
+          <h5 class="col-9 offset-3 text-muted">Local context</h5>
         </div>
         {% render_field device_form.local_context_data %}
       </div>
@@ -116,11 +116,11 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
       </div>
     </div>
     {% if has_ip %}
-      <h2 class="card-header">Sieťové pripojenie</h2>
+      <h2 class="card-header">Network connection</h2>
       <div class="card-body">
         <div class="row">
           <div class="col col-12 col-lg-6">
-            <h5 class="text-muted">Loopback rozhranie</h5>
+            <h5 class="text-muted">Loopback interface</h5>
             <div class="row">
               <div class="col col-md-6">{% render_field iface_form.name %}</div>
               <div class="col col-md-6">{% render_field iface_form.type %}</div>
@@ -128,21 +128,21 @@ zaisťuje rovnakú šírku formulára ako natívna stránka Add Device.
             {% render_field iface_form.enabled %}
           </div>
           <div class="col col-12 col-lg-6">
-            <h5 class="text-muted">IP adresa</h5>
+            <h5 class="text-muted">IP address</h5>
             {% render_field ip_form.address %}
             {% render_field ip_form.status %}
             {% render_field ip_form.primary_for_parent %}
           </div>
         </div>
         <div class="form-text">
-          Vymaž adresu vyššie, ak nechceš vytvárať loopback rozhranie
-          ani IP — vznikne len samotné zariadenie.
+          Clear the address above if you don't want to create a loopback
+          interface or IP — only the device itself will be created.
         </div>
       </div>
     {% endif %}
     <div class="card-body">
       <button type="submit" class="btn btn-primary">
-        <i class="mdi mdi-plus"></i> Vytvoriť zariadenie{% if has_ip %} + rozhranie + IP{% endif %}
+        <i class="mdi mdi-plus"></i> Create device{% if has_ip %} + interface + IP{% endif %}
       </button>
     </div>
   </div>

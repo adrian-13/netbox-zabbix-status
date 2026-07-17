@@ -6,23 +6,23 @@
     <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_regenerate_tags' pk=object.pk %}" class="d-inline">
       {% csrf_token %}
       <button type="submit" class="btn btn-outline-success"
-              title="Znovu zapíše spravované tagy (nbx_siteid/nbx_deviceid/nbx_rackid alebo nbx_vmid) podľa aktuálneho stavu">
-        <i class="mdi mdi-tag-refresh"></i> Vygenerovať Zabbix tagy
+              title="Rewrites the managed tags (nbx_siteid/nbx_deviceid/nbx_rackid or nbx_vmid) based on the current state">
+        <i class="mdi mdi-tag-refresh"></i> Generate Zabbix tags
       </button>
     </form>
   {% endif %}
   {% if perms.netbox_zabbix_status.change_zabbixhost %}
     <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
             data-bs-target="#zabbix-tag-add-modal"
-            title="Zapíše vlastný tag priamo do Zabbixu">
-      <i class="mdi mdi-tag-plus"></i> Pridať vlastný tag
+            title="Writes a custom tag directly to Zabbix">
+      <i class="mdi mdi-tag-plus"></i> Add custom tag
     </button>
   {% endif %}
   {% if perms.netbox_zabbix_status.change_zabbixhost and removable_zabbix_tags %}
     <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
             data-bs-target="#zabbix-tags-remove-modal"
-            title="Odstráni vybrané tagy priamo v Zabbixe">
-      <i class="mdi mdi-tag-remove"></i> Odstrániť Zabbix tagy
+            title="Removes the selected tags directly in Zabbix">
+      <i class="mdi mdi-tag-remove"></i> Remove Zabbix tags
     </button>
   {% endif %}
 {% endblock %}
@@ -36,28 +36,28 @@
           <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_add_tag' pk=object.pk %}">
             {% csrf_token %}
             <div class="modal-header">
-              <h5 class="modal-title">Pridať vlastný Zabbix tag</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavrieť"></button>
+              <h5 class="modal-title">Add custom Zabbix tag</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <p class="text-muted">
-                Zapíše nový tag priamo na hosta <code>{{ object.name }}</code> v Zabbixe.
-                Tag spravovaný pluginom automaticky (napr. <code>nbx_siteid</code>) tu
-                zapísať nejde — použi tlačidlo „Vygenerovať Zabbix tagy" vyššie.
+                Writes a new tag directly to host <code>{{ object.name }}</code> in Zabbix.
+                A tag automatically managed by the plugin (e.g. <code>nbx_siteid</code>) cannot
+                be written here — use the "Generate Zabbix tags" button above.
               </p>
               <div class="mb-2">
-                <label class="form-label" for="zabbix-tag-add-key">Kľúč</label>
+                <label class="form-label" for="zabbix-tag-add-key">Key</label>
                 <input type="text" class="form-control" id="zabbix-tag-add-key" name="tag_key" required>
               </div>
               <div class="mb-2">
-                <label class="form-label" for="zabbix-tag-add-value">Hodnota</label>
+                <label class="form-label" for="zabbix-tag-add-value">Value</label>
                 <input type="text" class="form-control" id="zabbix-tag-add-value" name="tag_value">
               </div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Zrušiť</button>
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
               <button type="submit" class="btn btn-primary">
-                <i class="mdi mdi-tag-plus"></i> Pridať tag
+                <i class="mdi mdi-tag-plus"></i> Add tag
               </button>
             </div>
           </form>
@@ -72,13 +72,13 @@
           <form method="post" action="{% url 'plugins:netbox_zabbix_status:zabbixhost_remove_tags' pk=object.pk %}">
             {% csrf_token %}
             <div class="modal-header">
-              <h5 class="modal-title">Odstrániť Zabbix tagy</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zavrieť"></button>
+              <h5 class="modal-title">Remove Zabbix tags</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <p class="text-muted">
-                Vyber, ktoré tagy sa majú odstrániť priamo v Zabbixe (na hostovi
-                <code>{{ object.name }}</code>). Ostatné tagy hosta nebudú dotknuté.
+                Select which tags should be removed directly in Zabbix (on host
+                <code>{{ object.name }}</code>). Other tags on the host will not be affected.
               </p>
               {% for tag in removable_zabbix_tags %}
                 <label class="form-check mb-1">
@@ -90,9 +90,9 @@
               {% endfor %}
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Zrušiť</button>
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
               <button type="submit" class="btn btn-danger">
-                <i class="mdi mdi-tag-remove"></i> Odstrániť vybrané
+                <i class="mdi mdi-tag-remove"></i> Remove selected
               </button>
             </div>
           </form>
@@ -109,11 +109,11 @@
         <h2 class="card-header">Zabbix host</h2>
         <table class="table table-hover attr-table">
           <tr>
-            <th scope="row">Viditeľné meno</th>
+            <th scope="row">Visible name</th>
             <td>{{ object.visible_name|placeholder }}</td>
           </tr>
           <tr>
-            <th scope="row">Technické meno</th>
+            <th scope="row">Name</th>
             <td><code>{{ object.name }}</code></td>
           </tr>
           <tr>
@@ -121,14 +121,14 @@
             <td>{{ object.zabbix_hostid }}</td>
           </tr>
           <tr>
-            <th scope="row">Stav</th>
+            <th scope="row">Status</th>
             <td>
               {% badge object.get_status_display bg_color=object.get_status_color %}
               {% if object.in_maintenance %}{% badge "Maintenance" bg_color="orange" %}{% endif %}
             </td>
           </tr>
           <tr>
-            <th scope="row">Priradený objekt</th>
+            <th scope="row">Assigned object</th>
             <td>{{ object.assigned_object|linkify|placeholder }}</td>
           </tr>
           <tr>
@@ -136,7 +136,7 @@
             <td>{{ object.site|linkify|placeholder }}</td>
           </tr>
           <tr>
-            <th scope="row">Párovanie</th>
+            <th scope="row">Matching</th>
             <td>{% badge object.get_match_method_display bg_color=object.get_match_method_color %}</td>
           </tr>
           <tr>
@@ -148,11 +148,11 @@
             <td>{{ object.host_groups|join:", "|placeholder }}</td>
           </tr>
           <tr>
-            <th scope="row">Šablóny</th>
+            <th scope="row">Templates</th>
             <td>{{ object.templates|join:", "|placeholder }}</td>
           </tr>
           <tr>
-            <th scope="row">Zabbix tagy</th>
+            <th scope="row">Zabbix tags</th>
             <td>
               {% for t in object.display_tags %}
                 <span class="badge text-bg-secondary me-1">{{ t.tag }}{% if t.value %}: {{ t.value }}{% endif %}</span>
@@ -162,13 +162,13 @@
             </td>
           </tr>
           <tr>
-            <th scope="row">Posledný sync</th>
-            <td><span title="{{ object.last_synced }}">pred {{ object.last_synced|timesince }}</span></td>
+            <th scope="row">Last synced</th>
+            <td><span title="{{ object.last_synced }}">{{ object.last_synced|timesince }} ago</span></td>
           </tr>
         </table>
       </div>
       <div class="card">
-        <h2 class="card-header">Dostupnosť</h2>
+        <h2 class="card-header">Availability</h2>
         <table class="table table-hover attr-table">
           <tr>
             <th scope="row">Agent</th>
@@ -187,7 +187,7 @@
             <td>{% badge object.get_jmx_available_display bg_color=object.get_jmx_available_color %}</td>
           </tr>
           <tr>
-            <th scope="row">Aktívny agent</th>
+            <th scope="row">Active agent</th>
             <td>{% badge object.get_active_available_display bg_color=object.get_active_available_color %}</td>
           </tr>
         </table>
@@ -195,10 +195,10 @@
     </div>
     <div class="col col-12 col-xl-6">
       <div class="card">
-        <h2 class="card-header">Interfejsy</h2>
+        <h2 class="card-header">Interfaces</h2>
         <table class="table table-hover">
           <thead>
-            <tr><th>Typ</th><th>Adresa</th><th>Port</th></tr>
+            <tr><th>Type</th><th>Address</th><th>Port</th></tr>
           </thead>
           <tbody>
             {% for iface in object.interfaces %}
@@ -210,16 +210,16 @@
                 <td>{{ iface.port }}</td>
               </tr>
             {% empty %}
-              <tr><td colspan="3" class="text-muted">Žiadne interfejsy</td></tr>
+              <tr><td colspan="3" class="text-muted">No interfaces</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
       <div class="card">
-        <h2 class="card-header">Aktívne problémy (snapshot)</h2>
+        <h2 class="card-header">Active problems (snapshot)</h2>
         <table class="table table-hover">
           <thead>
-            <tr><th>Severita</th><th>Problém</th><th>Od</th><th>Ack</th><th></th></tr>
+            <tr><th>Severity</th><th>Problem</th><th>Since</th><th>Ack</th><th></th></tr>
           </thead>
           <tbody>
             {% for p in object.problems.all %}
@@ -239,7 +239,7 @@
                 </td>
                 <td>
                   {% if p.get_zabbix_url %}
-                    <a href="{{ p.get_zabbix_url }}" target="_blank" title="Otvoriť problém v Zabbixe">
+                    <a href="{{ p.get_zabbix_url }}" target="_blank" title="Open problem in Zabbix">
                       <i class="mdi mdi-open-in-new"></i>
                     </a>
                   {% endif %}
@@ -248,7 +248,7 @@
             {% empty %}
               <tr>
                 <td colspan="5" class="text-muted">
-                  <i class="mdi mdi-check-circle text-success"></i> Žiadne aktívne problémy
+                  <i class="mdi mdi-check-circle text-success"></i> No active problems
                 </td>
               </tr>
             {% endfor %}

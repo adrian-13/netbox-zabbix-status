@@ -12,19 +12,19 @@ menu = PluginMenu(
             ),
             PluginMenuItem(
                 link='plugins:netbox_zabbix_status:zabbixhost_list',
-                link_text='Hosty',
+                link_text='Hosts',
                 permissions=['netbox_zabbix_status.view_zabbixhost'],
             ),
             PluginMenuItem(
                 link='plugins:netbox_zabbix_status:zabbixproblem_list',
-                link_text='Problémy',
+                link_text='Problems',
                 permissions=['netbox_zabbix_status.view_zabbixproblem'],
             ),
         )),
-        ('Konfigurácia', (
+        ('Configuration', (
             PluginMenuItem(
                 link='plugins:netbox_zabbix_status:settings',
-                link_text='Nastavenia',
+                link_text='Settings',
                 permissions=['netbox_zabbix_status.change_zabbixconfiguration'],
             ),
         )),
